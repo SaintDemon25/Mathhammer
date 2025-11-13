@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warhammer 40k Mathhammer Calculator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚔️ Warhammer 40k Mathhammer</h1>
+            <p class="subtitle">10th Edition Combat Calculator</p>
+        </header>
+
+        <div class="dataset-info">
+            <div id="datasetStatus">
+                <span class="loading">Loading dataset...</span>
+            </div>
+            <button id="loadDatasetBtn" class="btn btn-secondary">Reload Dataset</button>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="attack">Attack Calculator</button>
+            <button class="tab-btn" data-tab="compare">Weapon Comparison</button>
+            <button class="tab-btn" data-tab="simulate">Combat Simulation</button>
+        </div>
+
+        <!-- Attack Calculator Tab -->
+        <div id="attack-tab" class="tab-content active">
+            <h2>Attack Outcome Calculator</h2>
+            <div class="calculator-grid">
+                <div class="input-section">
+                    <h3>Attacker</h3>
+                    <div class="form-group">
+                        <label>Search Unit:</label>
+                        <input type="text" id="attackerSearch" class="search-input" placeholder="Type to search...">
+                        <div id="attackerResults" class="search-results"></div>
+                    </div>
+                    <div id="attackerInfo" class="unit-info"></div>
+
+                    <div class="form-group">
+                        <label>Weapon:</label>
+                        <select id="weaponSelect" class="select-input">
+                            <option value="">Select a weapon</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Number of Models:</label>
+                        <input type="number" id="numModels" class="number-input" value="1" min="1">
+                    </div>
+                </div>
+
+                <div class="input-section">
+                    <h3>Defender</h3>
+                    <div class="form-group">
+                        <label>Search Unit:</label>
+                        <input type="text" id="defenderSearch" class="search-input" placeholder="Type to search...">
+                        <div id="defenderResults" class="search-results"></div>
+                    </div>
+                    <div id="defenderInfo" class="unit-info"></div>
+                </div>
+            </div>
+
+            <button id="calculateBtn" class="btn btn-primary">Calculate</button>
+
+            <div id="attackResults" class="results-section"></div>
+        </div>
+
+        <!-- Weapon Comparison Tab -->
+        <div id="compare-tab" class="tab-content">
+            <h2>Weapon Effectiveness Comparison</h2>
+            <div class="calculator-grid">
+                <div class="input-section">
+                    <h3>Attacking Unit</h3>
+                    <div class="form-group">
+                        <label>Search Unit:</label>
+                        <input type="text" id="compareAttackerSearch" class="search-input" placeholder="Type to search...">
+                        <div id="compareAttackerResults" class="search-results"></div>
+                    </div>
+                    <div id="compareAttackerInfo" class="unit-info"></div>
+
+                    <div class="form-group">
+                        <label>Number of Models:</label>
+                        <input type="number" id="compareNumModels" class="number-input" value="1" min="1">
+                    </div>
+                </div>
+
+                <div class="input-section">
+                    <h3>Target</h3>
+                    <div class="form-group">
+                        <label>Search Unit:</label>
+                        <input type="text" id="compareDefenderSearch" class="search-input" placeholder="Type to search...">
+                        <div id="compareDefenderResults" class="search-results"></div>
+                    </div>
+                    <div id="compareDefenderInfo" class="unit-info"></div>
+                </div>
+            </div>
+
+            <button id="compareBtn" class="btn btn-primary">Compare Weapons</button>
+
+            <div id="compareResults" class="results-section"></div>
+        </div>
+
+        <!-- Combat Simulation Tab -->
+        <div id="simulate-tab" class="tab-content">
+            <h2>Unit vs Unit Combat Simulation</h2>
+            <div class="calculator-grid">
+                <div class="input-section">
+                    <h3>Attacker</h3>
+                    <div class="form-group">
+                        <label>Search Unit:</label>
+                        <input type="text" id="simAttackerSearch" class="search-input" placeholder="Type to search...">
+                        <div id="simAttackerResults" class="search-results"></div>
+                    </div>
+                    <div id="simAttackerInfo" class="unit-info"></div>
+
+                    <div class="form-group">
+                        <label>Number of Models:</label>
+                        <input type="number" id="simAttackerCount" class="number-input" value="1" min="1">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Weapon (optional):</label>
+                        <select id="simWeaponSelect" class="select-input">
+                            <option value="">First weapon</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="input-section">
+                    <h3>Defender</h3>
+                    <div class="form-group">
+                        <label>Search Unit:</label>
+                        <input type="text" id="simDefenderSearch" class="search-input" placeholder="Type to search...">
+                        <div id="simDefenderResults" class="search-results"></div>
+                    </div>
+                    <div id="simDefenderInfo" class="unit-info"></div>
+
+                    <div class="form-group">
+                        <label>Number of Models:</label>
+                        <input type="number" id="simDefenderCount" class="number-input" value="1" min="1">
+                    </div>
+                </div>
+            </div>
+
+            <button id="simulateBtn" class="btn btn-primary">Simulate Combat</button>
+
+            <div id="simulateResults" class="results-section"></div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Data format: BSData (BattleScribe) | Warhammer 40,000 10th Edition</p>
+        <p>Place .cat and .gst files in the datasets/ directory to import</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

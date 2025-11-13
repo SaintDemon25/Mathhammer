@@ -36,8 +36,11 @@ class BSDataParser:
             # Replace element names with prefixed versions
             # e.g., ".//selectionEntry" -> ".//bs:selectionEntry"
             ns_path = path
-            for tag in ['selectionEntry', 'sharedSelectionEntry', 'profile', 'profileType',
-                       'characteristicType', 'characteristic', 'rule', 'description', 'cost',
+            for tag in ['selectionEntry', 'sharedSelectionEntry', 'selectionEntryGroup',
+                       'selectionEntryGroups', 'entryLinks', 'constraints', 'constraint',
+                       'profile', 'profiles', 'profileType',
+                       'characteristicType', 'characteristic', 'characteristics',
+                       'rule', 'description', 'cost', 'costs',
                        'categoryLink', 'entryLink']:
                 ns_path = ns_path.replace(f'//{tag}', f'//bs:{tag}')
                 ns_path = ns_path.replace(f'/{tag}', f'/bs:{tag}')
@@ -56,8 +59,11 @@ class BSDataParser:
         try:
             # Convert XPath to use namespace prefix
             ns_path = path
-            for tag in ['selectionEntry', 'sharedSelectionEntry', 'profile', 'profileType',
-                       'characteristicType', 'characteristic', 'rule', 'description', 'cost',
+            for tag in ['selectionEntry', 'sharedSelectionEntry', 'selectionEntryGroup',
+                       'selectionEntryGroups', 'entryLinks', 'constraints', 'constraint',
+                       'profile', 'profiles', 'profileType',
+                       'characteristicType', 'characteristic', 'characteristics',
+                       'rule', 'description', 'cost', 'costs',
                        'categoryLink', 'entryLink']:
                 ns_path = ns_path.replace(f'//{tag}', f'//bs:{tag}')
                 ns_path = ns_path.replace(f'/{tag}', f'/bs:{tag}')

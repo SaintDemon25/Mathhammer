@@ -128,6 +128,47 @@ class Ability:
 
 
 @dataclass
+class Constraint:
+    """Represents a BSData constraint (min/max selections)"""
+    type: str  # "min" or "max"
+    value: int
+    field: str = "selections"
+    scope: str = "parent"
+
+
+@dataclass
+class WeaponOption:
+    """Represents a weapon selection option with constraints"""
+    id: str
+    name: str
+    weapon_profile: Optional[WeaponProfile] = None
+    is_default: bool = False
+    constraints: List[Constraint] = field(default_factory=list)
+
+
+@dataclass
+class WeaponOptionGroup:
+    """Represents a group of mutually exclusive weapon options"""
+    name: str  # e.g., "Weapon 1", "Weapon 2"
+    options: List[WeaponOption] = field(default_factory=list)
+    min_selections: int = 0
+    max_selections: int = 1
+    default_option_id: Optional[str] = None
+
+
+@dataclass
+class ModelComposition:
+    """Represents a model within a unit (e.g., Intercessor Sergeant)"""
+    id: str
+    name: str
+    min_count: int = 1
+    max_count: int = 1
+    unit_profile: Optional[UnitProfile] = None
+    weapon_groups: List[WeaponOptionGroup] = field(default_factory=list)
+    fixed_weapons: List[WeaponProfile] = field(default_factory=list)  # Weapons that are always included
+
+
+@dataclass
 class Unit:
     """Represents a complete unit with all its profiles and options"""
     id: str
@@ -139,6 +180,11 @@ class Unit:
     keywords: List[str] = field(default_factory=list)
     points_cost: int = 0
     metadata: Dict[str, Any] = field(default_factory=dict)
+
+    # Army builder fields
+    model_composition: List[ModelComposition] = field(default_factory=list)
+    max_in_roster: int = 3  # Default: 3 of each datasheet (10th ed rule)
+    categories: List[str] = field(default_factory=list)  # e.g., ["Battleline", "Infantry", "Character"]
 
     def get_weapon_by_name(self, name: str) -> Optional[WeaponProfile]:
         """Find a weapon by name"""
@@ -174,3 +220,59 @@ class DataCatalog:
         """Search units by name"""
         query = query.lower()
         return [u for u in self.units.values() if query in u.name.lower()]
+
+
+@dataclass
+class SelectedWeapon:
+    """Represents a selected weapon in an army list"""
+    weapon_profile: WeaponProfile
+    option_id: str  # Links back to WeaponOption
+
+
+@dataclass
+class SelectedModel:
+    """Represents selected models within a unit"""
+    model_id: str
+    model_name: str
+    count: int
+    selected_weapons: Dict[str, SelectedWeapon] = field(default_factory=dict)  # group_name -> weapon
+
+
+@dataclass
+class ArmyUnit:
+    """Represents a unit in an army list with selected options"""
+    unit_id: str
+    unit_name: str
+    faction: str
+    selected_models: List[SelectedModel] = field(default_factory=list)
+    points_cost: int = 0
+    enhancements: List[str] = field(default_factory=list)  # For characters
+
+
+@dataclass
+class Army:
+    """Represents a complete army roster"""
+    name: str
+    faction: str
+    detachment: str = "Gladius Strike Force"  # Default detachment
+    points_limit: int = 2000  # Default: Strike Force
+    units: List[ArmyUnit] = field(default_factory=list)
+    created_at: str = ""
+    modified_at: str = ""
+
+    def total_points(self) -> int:
+        """Calculate total points of army"""
+        return sum(u.points_cost for u in self.units)
+
+    def unit_count(self, unit_id: str) -> int:
+        """Count how many times a unit datasheet appears"""
+        return sum(1 for u in self.units if u.unit_id == unit_id)
+
+    def is_valid(self) -> bool:
+        """Check if army is valid (within points, at least 1 character, etc.)"""
+        # Check points limit
+        if self.total_points() > self.points_limit:
+            return False
+
+        # TODO: Add more validation rules
+        return True

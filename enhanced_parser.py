@@ -7,7 +7,10 @@ from typing import Dict, List, Optional
 from pathlib import Path
 import logging
 
-from mathhammer.models import Unit, UnitProfile, WeaponProfile, Characteristic, DataCatalog
+from mathhammer.models import (
+    Unit, UnitProfile, WeaponProfile, Characteristic, DataCatalog,
+    Ability, Constraint, WeaponOption, WeaponOptionGroup, ModelComposition
+)
 from mathhammer.parser import BSDataParser
 
 logger = logging.getLogger(__name__)
@@ -154,6 +157,16 @@ class EnhancedBSDataParser(BSDataParser):
             category_name = category_link.get('name', '')
             if category_name:
                 unit.keywords.append(category_name)
+                unit.categories.append(category_name)
+
+        # Parse constraints (max in roster, etc.)
+        unit.max_in_roster = self._parse_max_in_roster(entry)
+
+        # Parse points cost
+        unit.points_cost = self._parse_points_cost(entry)
+
+        # Parse model composition (for units with multiple model types)
+        unit.model_composition = self._parse_model_composition(entry, faction)
 
         # Return unit even without weapons (we'll get them from nested structures)
         if unit.unit_profile or unit.weapons:
@@ -279,3 +292,286 @@ class EnhancedBSDataParser(BSDataParser):
         # Split by comma and clean up
         abilities = [kw.strip() for kw in keywords_str.split(',')]
         return [ab for ab in abilities if ab]
+
+    def _parse_constraint(self, constraint_elem: ET.Element) -> Optional[Constraint]:
+        """Parse a single constraint element"""
+        try:
+            constraint_type = constraint_elem.get('type', '')
+            value_str = constraint_elem.get('value', '0')
+            field = constraint_elem.get('field', 'selections')
+            scope = constraint_elem.get('scope', 'parent')
+
+            # Only parse min/max constraints
+            if constraint_type not in ['min', 'max']:
+                return None
+
+            return Constraint(
+                type=constraint_type,
+                value=int(value_str),
+                field=field,
+                scope=scope
+            )
+        except (ValueError, AttributeError) as e:
+            logger.debug(f"Could not parse constraint: {e}")
+            return None
+
+    def _parse_max_in_roster(self, entry: ET.Element) -> int:
+        """Parse maximum number of this unit allowed in roster"""
+        # Look for constraint with scope="roster" or "force" and field="selections"
+        for constraint in self._find(entry, './/constraint'):
+            constraint_type = constraint.get('type', '')
+            scope = constraint.get('scope', '')
+            field = constraint.get('field', '')
+
+            if constraint_type == 'max' and scope in ['roster', 'force'] and field == 'selections':
+                value_str = constraint.get('value', '3')
+                try:
+                    return int(value_str)
+                except ValueError:
+                    pass
+
+        # Check if it's a Battleline or Dedicated Transport (max 6 in 10th ed)
+        for category_link in self._find(entry, './/categoryLink'):
+            category = category_link.get('name', '').lower()
+            if 'battleline' in category or 'dedicated transport' in category:
+                return 6
+
+        # Default is 3 in 10th edition
+        return 3
+
+    def _parse_points_cost(self, entry: ET.Element) -> int:
+        """Parse points cost from cost elements"""
+        for cost in self._find(entry, './/cost'):
+            cost_name = cost.get('name', '').lower()
+            if cost_name in ['pts', 'points']:
+                value_str = cost.get('value', '0')
+                try:
+                    return int(float(value_str))
+                except ValueError:
+                    pass
+        return 0
+
+    def _parse_model_composition(self, entry: ET.Element, faction: str) -> List[ModelComposition]:
+        """Parse model composition from selectionEntryGroups"""
+        models = []
+
+        # Look for selectionEntryGroups that contain model selectionEntries
+        # Get direct child groups only (to avoid nested weapon groups)
+        seen_models = set()  # Track models to avoid duplicates
+        for group in self._find(entry, './/selectionEntryGroup'):
+            group_name = group.get('name', '')
+
+            # Look for DIRECT model children within this group (not nested)
+            for model_entry in self._find(group, './/selectionEntry'):
+                model_type = model_entry.get('type', '')
+                if model_type != 'model':
+                    continue
+
+                model_id = model_entry.get('id', '')
+                model_name = model_entry.get('name', '')
+
+                # Skip if we already saw this model (can happen with nested groups)
+                if model_id in seen_models:
+                    continue
+                seen_models.add(model_id)
+
+                # Parse model constraints (min/max count)
+                min_count = 1
+                max_count = 1
+
+                for constraint in self._find(model_entry, 'constraints/constraint'):
+                    c = self._parse_constraint(constraint)
+                    if c and c.scope == 'parent' and c.field == 'selections':
+                        if c.type == 'min':
+                            min_count = c.value
+                        elif c.type == 'max':
+                            max_count = c.value
+
+                # Parse model's unit profile
+                model_profile = None
+                for profile in self._find(model_entry, 'profiles/profile'):
+                    parsed = self._parse_profile_element(profile)
+                    if parsed and parsed.type_name == 'Unit':
+                        model_profile = UnitProfile(
+                            name=parsed.name,
+                            type_name=parsed.type_name,
+                            characteristics=parsed.characteristics
+                        )
+                        break
+
+                # Parse weapon option groups for this model
+                weapon_groups = self._parse_weapon_option_groups(model_entry)
+
+                # Parse fixed weapons (from entryLinks with min=max=1)
+                fixed_weapons = self._parse_fixed_weapons(model_entry)
+
+                model = ModelComposition(
+                    id=model_id,
+                    name=model_name,
+                    min_count=min_count,
+                    max_count=max_count,
+                    unit_profile=model_profile,
+                    weapon_groups=weapon_groups,
+                    fixed_weapons=fixed_weapons
+                )
+
+                models.append(model)
+
+        return models
+
+    def _parse_weapon_option_groups(self, model_entry: ET.Element) -> List[WeaponOptionGroup]:
+        """Parse weapon selection groups for a model"""
+        groups = []
+
+        for group_elem in self._find(model_entry, 'selectionEntryGroups/selectionEntryGroup'):
+            group_name = group_elem.get('name', '')
+            default_id = group_elem.get('defaultSelectionEntryId', '')
+
+            # Parse group constraints
+            min_sel = 0
+            max_sel = 1
+
+            for constraint in self._find(group_elem, 'constraints/constraint'):
+                c = self._parse_constraint(constraint)
+                if c and c.scope == 'parent' and c.field == 'selections':
+                    if c.type == 'min':
+                        min_sel = c.value
+                    elif c.type == 'max':
+                        max_sel = c.value
+
+            # Parse weapon options within this group
+            options = []
+
+            # From direct selectionEntry elements
+            for entry in self._find(group_elem, 'selectionEntries/selectionEntry'):
+                option = self._parse_weapon_option(entry, default_id)
+                if option:
+                    options.append(option)
+
+            # From entryLinks
+            for link in self._find(group_elem, 'entryLinks/entryLink'):
+                option = self._parse_weapon_option_from_link(link, default_id)
+                if option:
+                    options.append(option)
+
+            if options:
+                group = WeaponOptionGroup(
+                    name=group_name,
+                    options=options,
+                    min_selections=min_sel,
+                    max_selections=max_sel,
+                    default_option_id=default_id if default_id else None
+                )
+                groups.append(group)
+
+        return groups
+
+    def _parse_weapon_option(self, entry: ET.Element, default_id: str) -> Optional[WeaponOption]:
+        """Parse a single weapon option from selectionEntry"""
+        option_id = entry.get('id', '')
+        option_name = entry.get('name', '')
+        is_default = (option_id == default_id)
+
+        # Parse weapon profile
+        weapon_prof = None
+        for profile in self._find(entry, './/profile'):
+            parsed = self._parse_profile_element(profile)
+            if parsed and parsed.type_name in ['Ranged Weapons', 'Melee Weapons']:
+                weapon_prof = WeaponProfile(
+                    name=parsed.name,
+                    type_name=parsed.type_name,
+                    characteristics=parsed.characteristics
+                )
+                break
+
+        # Parse constraints
+        constraints = []
+        for constraint in self._find(entry, 'constraints/constraint'):
+            c = self._parse_constraint(constraint)
+            if c:
+                constraints.append(c)
+
+        return WeaponOption(
+            id=option_id,
+            name=option_name,
+            weapon_profile=weapon_prof,
+            is_default=is_default,
+            constraints=constraints
+        )
+
+    def _parse_weapon_option_from_link(self, link: ET.Element, default_id: str) -> Optional[WeaponOption]:
+        """Parse weapon option from entryLink"""
+        link_id = link.get('id', '')
+        target_id = link.get('targetId', '')
+        option_name = link.get('name', '')
+        is_default = (link_id == default_id or target_id == default_id)
+
+        # Resolve the target
+        weapon_prof = None
+        if target_id in self.shared_definitions:
+            target_entry = self.shared_definitions[target_id]
+
+            # Parse weapon profile from target
+            for profile in self._find(target_entry, './/profile'):
+                parsed = self._parse_profile_element(profile)
+                if parsed and parsed.type_name in ['Ranged Weapons', 'Melee Weapons']:
+                    weapon_prof = WeaponProfile(
+                        name=parsed.name,
+                        type_name=parsed.type_name,
+                        characteristics=parsed.characteristics
+                    )
+                    break
+
+        # Parse constraints
+        constraints = []
+        for constraint in self._find(link, 'constraints/constraint'):
+            c = self._parse_constraint(constraint)
+            if c:
+                constraints.append(c)
+
+        return WeaponOption(
+            id=link_id or target_id,
+            name=option_name,
+            weapon_profile=weapon_prof,
+            is_default=is_default,
+            constraints=constraints
+        )
+
+    def _parse_fixed_weapons(self, model_entry: ET.Element) -> List[WeaponProfile]:
+        """Parse weapons that are always equipped (min=max=1 with no choices)"""
+        fixed = []
+
+        for link in self._find(model_entry, 'entryLinks/entryLink'):
+            target_id = link.get('targetId', '')
+            link_name = link.get('name', '')
+
+            # Check if this is a fixed weapon (has min=max=1 constraints)
+            min_val = None
+            max_val = None
+
+            for constraint in self._find(link, 'constraints/constraint'):
+                c = self._parse_constraint(constraint)
+                if c and c.scope == 'parent' and c.field == 'selections':
+                    if c.type == 'min':
+                        min_val = c.value
+                    elif c.type == 'max':
+                        max_val = c.value
+
+            # Fixed weapon: min=1, max=1
+            if min_val == 1 and max_val == 1:
+                # Resolve weapon
+                if target_id in self.shared_definitions:
+                    target_entry = self.shared_definitions[target_id]
+
+                    for profile in self._find(target_entry, './/profile'):
+                        parsed = self._parse_profile_element(profile)
+                        if parsed and parsed.type_name in ['Ranged Weapons', 'Melee Weapons']:
+                            weapon = WeaponProfile(
+                                name=parsed.name,
+                                type_name=parsed.type_name,
+                                characteristics=parsed.characteristics
+                            )
+                            fixed.append(weapon)
+                            break
+
+        return fixed

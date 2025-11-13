@@ -154,3 +154,12 @@ class EnhancedBSDataParser(BSDataParser):
         logger.info(f"Total factions: {len(self.catalog.factions)}")
 
         return self.catalog
+
+    def _parse_abilities_from_keywords(self, keywords_str: str) -> List[str]:
+        """Parse ability keywords from comma-separated string"""
+        if not keywords_str:
+            return []
+
+        # Split by comma and clean up
+        abilities = [kw.strip() for kw in keywords_str.split(',')]
+        return [ab for ab in abilities if ab]

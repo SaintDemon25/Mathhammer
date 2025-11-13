@@ -247,6 +247,28 @@ def get_unit(unit_id):
     if not unit:
         return jsonify({'error': 'Unit not found'}), 404
 
+    # Extract unit abilities from keywords
+    unit_abilities = []
+    if unit.unit_profile and hasattr(unit.unit_profile, 'characteristics'):
+        try:
+            for char in unit.unit_profile.characteristics:
+                # Handle Characteristic objects
+                if hasattr(char, 'name') and hasattr(char, 'value'):
+                    char_name = char.name
+                    char_value = char.value
+                elif isinstance(char, dict):
+                    char_name = char.get('name', '')
+                    char_value = char.get('value', '')
+                else:
+                    continue
+
+                if char_name and char_name.lower() in ['keywords', 'abilities']:
+                    # Parse comma-separated abilities
+                    if char_value:
+                        unit_abilities.extend([a.strip() for a in char_value.split(',')])
+        except Exception as e:
+            logger.warning(f"Error extracting unit abilities: {e}")
+
     return jsonify({
         'id': unit.id,
         'name': unit.name,
@@ -255,6 +277,8 @@ def get_unit(unit_id):
             'toughness': unit.unit_profile.toughness if unit.unit_profile else None,
             'save': unit.unit_profile.save if unit.unit_profile else None,
             'wounds': unit.unit_profile.wounds if unit.unit_profile else None,
+            'invuln': unit.unit_profile.invulnerable_save if unit.unit_profile else None,
+            'abilities': unit_abilities
         } if unit.unit_profile else None,
         'weapons': [{
             'name': w.name,
@@ -263,9 +287,38 @@ def get_unit(unit_id):
             'skill': w.skill,
             'strength': w.strength,
             'ap': w.armor_penetration,
-            'damage': w.damage
+            'damage': w.damage,
+            'abilities': extract_weapon_abilities(w)
         } for w in unit.weapons]
     })
+
+
+def extract_weapon_abilities(weapon):
+    """Extract abilities from weapon characteristics"""
+    abilities = []
+    if not hasattr(weapon, 'characteristics'):
+        return abilities
+
+    try:
+        for char in weapon.characteristics:
+            # Handle Characteristic objects
+            if hasattr(char, 'name') and hasattr(char, 'value'):
+                char_name = char.name
+                char_value = char.value
+            elif isinstance(char, dict):
+                char_name = char.get('name', '')
+                char_value = char.get('value', '')
+            else:
+                continue
+
+            if char_name and char_name.lower() in ['keywords', 'abilities']:
+                # Parse comma-separated abilities
+                if char_value:
+                    abilities.extend([a.strip() for a in char_value.split(',')])
+    except Exception as e:
+        logger.warning(f"Error extracting weapon abilities: {e}")
+
+    return abilities
 
 
 def parse_anti(anti_str):
@@ -312,6 +365,49 @@ def calculate_statistics(results: list) -> dict:
         'min_models_destroyed': min(r.models_destroyed for r in results),
         'max_models_destroyed': max(r.models_destroyed for r in results)
     }
+
+
+@app.route('/api/upload-dataset', methods=['POST'])
+def upload_dataset():
+    """Upload and process a dataset from GitHub"""
+    global catalog, parser
+
+    try:
+        data = request.json
+        filename = data.get('filename')
+        content = data.get('content')
+
+        if not filename or not content:
+            return jsonify({
+                'success': False,
+                'error': 'Missing filename or content'
+            }), 400
+
+        # Save to datasets directory
+        dataset_path = Path('datasets')
+        dataset_path.mkdir(exist_ok=True)
+
+        file_path = dataset_path / filename
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        # Reload all datasets with enhanced parser
+        parser = EnhancedBSDataParser()
+        catalog = parser.load_dataset_enhanced(str(dataset_path))
+
+        return jsonify({
+            'success': True,
+            'units_loaded': len(catalog.units),
+            'selectable_units': len(parser.selectable_units),
+            'factions': catalog.factions
+        })
+
+    except Exception as e:
+        logger.error(f"Error uploading dataset: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 
 if __name__ == '__main__':

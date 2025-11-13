@@ -3,6 +3,73 @@
 let currentStep = 1;
 const totalSteps = 4;
 
+// ===== TOAST NOTIFICATION SYSTEM =====
+
+function showToast(message, type = 'info', title = null, duration = 4000) {
+    const container = document.getElementById('toast-container');
+    if (!container) {
+        // Create container if it doesn't exist
+        const newContainer = document.createElement('div');
+        newContainer.id = 'toast-container';
+        newContainer.className = 'toast-container';
+        document.body.appendChild(newContainer);
+        return showToast(message, type, title, duration);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    };
+
+    const titles = {
+        success: title || 'Success',
+        error: title || 'Error',
+        warning: title || 'Warning',
+        info: title || 'Info'
+    };
+
+    toast.innerHTML = `
+        <div class="toast-icon">
+            <i class="fas ${icons[type]}"></i>
+        </div>
+        <div class="toast-content">
+            <div class="toast-title">${titles[type]}</div>
+            <div class="toast-message">${message}</div>
+        </div>
+        <button class="toast-close" onclick="closeToast(this)">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+
+    container.appendChild(toast);
+
+    // Auto remove after duration
+    if (duration > 0) {
+        setTimeout(() => {
+            closeToast(toast.querySelector('.toast-close'));
+        }, duration);
+    }
+
+    return toast;
+}
+
+function closeToast(button) {
+    const toast = button.closest('.toast');
+    toast.classList.add('removing');
+    setTimeout(() => {
+        toast.remove();
+    }, 300);
+}
+
+function showLoading(message = 'Loading...') {
+    return showToast(message, 'info', 'Loading', 0);
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     initializeEventListeners();
@@ -177,14 +244,16 @@ async function loadAttackerFromUnit() {
         const selectedWeaponIndex = weaponSelect.value;
 
         if (!unitId) {
-            alert('Please select a unit first');
+            showToast('Please select a unit first', 'warning');
             return;
         }
 
         if (!selectedWeaponIndex) {
-            alert('Please select a weapon');
+            showToast('Please select a weapon', 'warning');
             return;
         }
+
+        const loadingToast = showLoading('Loading weapon stats...');
 
         // Get weapon data from the selected option
         const selectedOption = weaponSelect.options[weaponSelect.selectedIndex];
@@ -192,7 +261,7 @@ async function loadAttackerFromUnit() {
 
         // Auto-fill attacker fields
         document.getElementById('num_attacks').value = parseAttacks(weaponData.attacks) || 1;
-        document.getElementById('skill').value = weaponData.skill || 4;
+        document.getElementById('skill').value = parseSkill(weaponData.skill) || 4;
         document.getElementById('strength').value = weaponData.strength || 4;
         document.getElementById('ap').value = Math.abs(weaponData.ap || 0);
         document.getElementById('damage').value = weaponData.damage || '1';
@@ -206,13 +275,17 @@ async function loadAttackerFromUnit() {
         }
         updateAttackTypeLabel();
 
-        // Show success message
-        console.log(`Loaded weapon: ${weaponData.name}`);
-        alert(`✓ Loaded weapon stats for ${weaponData.name}`);
+        // Auto-fill weapon abilities if available
+        if (weaponData.abilities && weaponData.abilities.length > 0) {
+            applyWeaponAbilities(weaponData.abilities);
+        }
+
+        closeToast(loadingToast.querySelector('.toast-close'));
+        showToast(`Loaded weapon stats for ${weaponData.name}`, 'success');
 
     } catch (error) {
         console.error('Error loading attacker from unit:', error);
-        alert('Error loading unit data: ' + error.message);
+        showToast('Error loading unit data: ' + error.message, 'error');
     }
 }
 
@@ -221,9 +294,11 @@ async function loadDefenderFromUnit() {
         const unitId = document.getElementById('defender_unit').value;
 
         if (!unitId) {
-            alert('Please select a unit first');
+            showToast('Please select a unit first', 'warning');
             return;
         }
+
+        const loadingToast = showLoading('Loading unit profile...');
 
         // Get unit data
         const response = await fetch(`/api/unit/${unitId}`);
@@ -235,22 +310,30 @@ async function loadDefenderFromUnit() {
                 document.getElementById('toughness').value = data.profile.toughness;
             }
             if (data.profile.save) {
-                document.getElementById('save').value = data.profile.save;
+                document.getElementById('save').value = parseSkill(data.profile.save) || 3;
             }
             if (data.profile.wounds) {
                 document.getElementById('wounds_per_model').value = data.profile.wounds;
             }
+            if (data.profile.invuln) {
+                document.getElementById('invuln').value = parseSkill(data.profile.invuln) || '';
+            }
 
-            // Show success message
-            console.log(`Loaded unit: ${data.name}`);
-            alert(`✓ Loaded profile for ${data.name}`);
+            // Apply defender abilities if available
+            if (data.profile.abilities && data.profile.abilities.length > 0) {
+                applyDefenderAbilities(data.profile.abilities);
+            }
+
+            closeToast(loadingToast.querySelector('.toast-close'));
+            showToast(`Loaded profile for ${data.name}`, 'success');
         } else {
-            alert('This unit has no profile data available');
+            closeToast(loadingToast.querySelector('.toast-close'));
+            showToast('This unit has no profile data available', 'warning');
         }
 
     } catch (error) {
         console.error('Error loading defender from unit:', error);
-        alert('Error loading unit data: ' + error.message);
+        showToast('Error loading unit data: ' + error.message, 'error');
     }
 }
 
@@ -265,14 +348,113 @@ function parseAttacks(attacksStr) {
     // If it's dice notation, return average value
     if (attacksStr.includes('D6')) {
         const multiplier = attacksStr.replace('D6', '') || '1';
-        return parseInt(multiplier) * 3.5; // Average of D6
+        return Math.round(parseInt(multiplier) * 3.5); // Average of D6
     }
     if (attacksStr.includes('D3')) {
         const multiplier = attacksStr.replace('D3', '') || '1';
-        return parseInt(multiplier) * 2; // Average of D3
+        return Math.round(parseInt(multiplier) * 2); // Average of D3
     }
 
     return 1; // Default
+}
+
+function parseSkill(skillStr) {
+    // Parse skill value (e.g., "3+", "4+", "N/A")
+    if (!skillStr || skillStr === 'N/A' || skillStr === '-') return null;
+
+    // Extract number from "3+" format
+    const match = skillStr.match(/(\d+)/);
+    if (match) {
+        return parseInt(match[1]);
+    }
+
+    return null;
+}
+
+function applyWeaponAbilities(abilities) {
+    // Auto-check weapon ability checkboxes based on loaded abilities
+    const abilityMap = {
+        'Lethal Hits': 'lethal_hits',
+        'Devastating Wounds': 'devastating_wounds',
+        'Twin-linked': 'twin_linked',
+        'Torrent': 'torrent',
+        'Blast': 'blast',
+        'Ignores Cover': 'ignores_cover',
+        'Hazardous': 'hazardous',
+        'Precision': 'precision',
+        'Heavy': 'heavy',
+        'Assault': 'assault'
+    };
+
+    // Reset all weapon abilities first
+    Object.values(abilityMap).forEach(id => {
+        const elem = document.getElementById(id);
+        if (elem) elem.checked = false;
+    });
+
+    // Apply loaded abilities
+    abilities.forEach(ability => {
+        const abilityName = ability.trim();
+
+        // Check for exact matches
+        if (abilityMap[abilityName]) {
+            const elem = document.getElementById(abilityMap[abilityName]);
+            if (elem) elem.checked = true;
+        }
+
+        // Check for parameterized abilities (Anti-X, Melta X, etc.)
+        if (abilityName.startsWith('Anti-')) {
+            const elem = document.getElementById('anti');
+            if (elem) elem.value = abilityName.replace('Anti-', '');
+        } else if (abilityName.startsWith('Melta')) {
+            const elem = document.getElementById('melta');
+            if (elem) {
+                const match = abilityName.match(/Melta\s+(\d+)/);
+                if (match) elem.value = match[1];
+            }
+        } else if (abilityName.startsWith('Sustained Hits')) {
+            const elem = document.getElementById('sustained_hits');
+            if (elem) {
+                const match = abilityName.match(/Sustained Hits\s+(\d+)/);
+                if (match) elem.value = match[1];
+                else elem.value = '1'; // Default to 1 if no number specified
+            }
+        } else if (abilityName.startsWith('Rapid Fire')) {
+            const elem = document.getElementById('rapid_fire');
+            if (elem) {
+                const match = abilityName.match(/Rapid Fire\s+(\d+)/);
+                if (match) elem.value = match[1];
+            }
+        }
+    });
+
+    showToast(`Applied ${abilities.length} weapon abilities`, 'info', 'Abilities Loaded', 2000);
+}
+
+function applyDefenderAbilities(abilities) {
+    // Auto-check defender ability checkboxes based on loaded abilities
+    abilities.forEach(ability => {
+        const abilityName = ability.trim();
+
+        // Check for defender abilities
+        if (abilityName === 'Stealth') {
+            const elem = document.getElementById('stealth');
+            if (elem) elem.checked = true;
+        } else if (abilityName === 'Lone Operative') {
+            const elem = document.getElementById('lone_operative');
+            if (elem) elem.checked = true;
+        } else if (abilityName.startsWith('Feel No Pain')) {
+            const elem = document.getElementById('feel_no_pain');
+            if (elem) {
+                const match = abilityName.match(/Feel No Pain\s+(\d+)\+/);
+                if (match) elem.value = match[1];
+            }
+        }
+    });
+
+    if (abilities.length > 0) {
+        showToast(`Applied ${abilities.length} defender abilities`, 'info', 'Abilities Loaded', 2000);
+    }
 }
 
 function validateInput(input) {
@@ -395,7 +577,7 @@ function validateDefenderConfig() {
 }
 
 function showError(message) {
-    alert(message); // Simple alert for now, could be improved with modal
+    showToast(message, 'error');
 }
 
 function resetSimulator() {
@@ -650,4 +832,124 @@ function displayResults(result) {
 
     // Scroll to results
     resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ===== GITHUB DATASET LOADER =====
+
+const GITHUB_API = 'https://api.github.com/repos/BSData/wh40k-10e/contents';
+const GITHUB_RAW = 'https://raw.githubusercontent.com/BSData/wh40k-10e/main';
+
+async function openGitHubLoader() {
+    const modal = document.getElementById('github-modal');
+    modal.style.display = 'block';
+
+    try {
+        // Fetch available .cat files from GitHub
+        const response = await fetch(GITHUB_API);
+        const files = await response.json();
+
+        // Filter for .cat files (faction catalogs)
+        const catalogs = files.filter(file => file.name.endsWith('.cat') && !file.name.includes('Library'));
+
+        // Display faction cards
+        const factionsContainer = document.getElementById('github-factions');
+        factionsContainer.innerHTML = '';
+
+        catalogs.forEach(catalog => {
+            const factionName = catalog.name.replace('.cat', '');
+            const card = document.createElement('div');
+            card.className = 'faction-card';
+            card.innerHTML = `
+                <div class="faction-card-name">
+                    <i class="fas fa-download"></i> ${factionName}
+                </div>
+                <div class="faction-card-info">
+                    Size: ${(catalog.size / 1024).toFixed(0)} KB
+                </div>
+            `;
+            card.onclick = () => downloadFromGitHub(catalog.name, catalog.download_url);
+            factionsContainer.appendChild(card);
+        });
+
+    } catch (error) {
+        console.error('Error loading GitHub datasets:', error);
+        showToast('Failed to load datasets from GitHub: ' + error.message, 'error');
+        const factionsContainer = document.getElementById('github-factions');
+        factionsContainer.innerHTML = '<p style="color: var(--danger-color);">Failed to load datasets. Please try again.</p>';
+    }
+}
+
+function closeGitHubLoader() {
+    document.getElementById('github-modal').style.display = 'none';
+}
+
+async function downloadFromGitHub(filename, downloadUrl) {
+    const loadingToast = showLoading(`Downloading ${filename}...`);
+
+    try {
+        // Download the file
+        const response = await fetch(downloadUrl);
+        const content = await response.text();
+
+        closeToast(loadingToast.querySelector('.toast-close'));
+        const processingToast = showLoading('Processing dataset...');
+
+        // Send to backend to process
+        const uploadResponse = await fetch('/api/upload-dataset', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                filename: filename,
+                content: content
+            })
+        });
+
+        const result = await uploadResponse.json();
+
+        closeToast(processingToast.querySelector('.toast-close'));
+
+        if (result.success) {
+            showToast(`Successfully loaded ${result.units_loaded} units from ${filename}`, 'success', 'Dataset Loaded', 6000);
+            closeGitHubLoader();
+
+            // Reload factions in the UI
+            setTimeout(() => {
+                loadFactions();
+            }, 500);
+        } else {
+            showToast('Failed to process dataset: ' + result.error, 'error');
+        }
+
+    } catch (error) {
+        console.error('Error downloading from GitHub:', error);
+        showToast('Failed to download dataset: ' + error.message, 'error');
+    }
+}
+
+async function loadLocalDataset() {
+    const loadingToast = showLoading('Loading local dataset...');
+
+    try {
+        const response = await fetch('/api/load-units', {
+            method: 'POST'
+        });
+        const result = await response.json();
+
+        closeToast(loadingToast.querySelector('.toast-close'));
+
+        if (result.success) {
+            showToast(`Loaded ${result.selectable_units} units from local datasets`, 'success', 'Dataset Loaded', 5000);
+            // Reload factions in the UI
+            setTimeout(() => {
+                loadFactions();
+            }, 500);
+        } else {
+            showToast('No local datasets found. Please download from GitHub or add .cat files to the datasets folder.', 'warning', 'No Datasets', 6000);
+        }
+    } catch (error) {
+        console.error('Error loading local dataset:', error);
+        showToast('Failed to load local dataset: ' + error.message, 'error');
+    }
 }

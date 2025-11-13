@@ -14,6 +14,22 @@
             <p class="subtitle">10th Edition - Full Rules Implementation</p>
         </header>
 
+        <!-- GitHub Dataset Loader -->
+        <div class="dataset-loader">
+            <div class="dataset-loader-title">
+                <i class="fab fa-github"></i> Load Dataset from GitHub
+            </div>
+            <p class="dataset-loader-desc">
+                Load official BSData Warhammer 40k 10th Edition datasets directly from GitHub
+            </p>
+            <button class="btn btn-github" onclick="openGitHubLoader()">
+                <i class="fab fa-github"></i> Browse GitHub Datasets
+            </button>
+            <button class="btn btn-secondary" onclick="loadLocalDataset()" style="margin-left: 12px;">
+                <i class="fas fa-folder-open"></i> Load Local Dataset
+            </button>
+        </div>
+
         <!-- Progress Steps -->
         <div class="steps-container">
             <div class="step active" data-step="1">
@@ -518,6 +534,32 @@
             </div>
         </div>
     </div>
+
+    <!-- GitHub Loader Modal -->
+    <div id="github-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; overflow-y: auto;">
+        <div style="max-width: 900px; margin: 50px auto; background: var(--surface); border-radius: 12px; padding: 30px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2 style="color: var(--accent-color); margin: 0;">
+                    <i class="fab fa-github"></i> BSData GitHub Repository
+                </h2>
+                <button class="btn btn-secondary" onclick="closeGitHubLoader()" style="padding: 8px 16px;">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+            <p style="color: var(--text-secondary); margin-bottom: 24px;">
+                Select a faction dataset to download and load from the official BSData repository.
+            </p>
+            <div id="github-factions" class="faction-grid">
+                <div class="loading-content">
+                    <div class="spinner large"></div>
+                    <p class="loading-text">Loading available datasets...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
 
     <script src="{{ url_for('static', filename='js/combat_sim.js') }}"></script>
 </body>

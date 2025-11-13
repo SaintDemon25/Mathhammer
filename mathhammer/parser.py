@@ -19,11 +19,57 @@ logger = logging.getLogger(__name__)
 class BSDataParser:
     """Parser for BattleScribe data files"""
 
+    # BattleScribe XML namespace
+    NAMESPACE = {'bs': 'http://www.battlescribe.net/schema/catalogueSchema'}
+
     def __init__(self):
         self.catalog = DataCatalog()
         self.game_system_data = {}
         self.shared_profiles = {}
         self.shared_rules = {}
+        self.use_namespace = True  # Flag to track if we need namespace handling
+
+    def _find(self, element: ET.Element, path: str) -> List[ET.Element]:
+        """Find elements with namespace handling"""
+        try:
+            # Convert XPath to use namespace prefix
+            # Replace element names with prefixed versions
+            # e.g., ".//selectionEntry" -> ".//bs:selectionEntry"
+            ns_path = path
+            for tag in ['selectionEntry', 'sharedSelectionEntry', 'profile', 'profileType',
+                       'characteristicType', 'characteristic', 'rule', 'description', 'cost',
+                       'categoryLink', 'entryLink']:
+                ns_path = ns_path.replace(f'//{tag}', f'//bs:{tag}')
+                ns_path = ns_path.replace(f'/{tag}', f'/bs:{tag}')
+
+            result = element.findall(ns_path, self.NAMESPACE)
+            if result:
+                return result
+        except Exception as e:
+            logger.debug(f"Namespace find failed for {path}: {e}")
+
+        # Fallback to without namespace
+        return element.findall(path)
+
+    def _find_one(self, element: ET.Element, path: str) -> Optional[ET.Element]:
+        """Find single element with namespace handling"""
+        try:
+            # Convert XPath to use namespace prefix
+            ns_path = path
+            for tag in ['selectionEntry', 'sharedSelectionEntry', 'profile', 'profileType',
+                       'characteristicType', 'characteristic', 'rule', 'description', 'cost',
+                       'categoryLink', 'entryLink']:
+                ns_path = ns_path.replace(f'//{tag}', f'//bs:{tag}')
+                ns_path = ns_path.replace(f'/{tag}', f'/bs:{tag}')
+
+            result = element.find(ns_path, self.NAMESPACE)
+            if result is not None:
+                return result
+        except Exception as e:
+            logger.debug(f"Namespace find_one failed for {path}: {e}")
+
+        # Fallback to without namespace
+        return element.find(path)
 
     def parse_game_system(self, file_path: str) -> Dict:
         """Parse the game system file (.gst)"""
@@ -35,12 +81,12 @@ class BSDataParser:
 
             # Store profile types for reference
             profile_types = {}
-            for profile_type in root.findall('.//profileType'):
+            for profile_type in self._find(root, './/profileType'):
                 type_id = profile_type.get('id')
                 type_name = profile_type.get('name')
                 characteristics = []
 
-                for char_type in profile_type.findall('.//characteristicType'):
+                for char_type in self._find(profile_type, './/characteristicType'):
                     characteristics.append({
                         'id': char_type.get('id'),
                         'name': char_type.get('name')
@@ -54,11 +100,11 @@ class BSDataParser:
             self.game_system_data['profile_types'] = profile_types
 
             # Parse shared profiles
-            for profile in root.findall('.//profile'):
+            for profile in self._find(root, './/profile'):
                 self._parse_profile_element(profile)
 
             # Parse shared rules/abilities
-            for rule in root.findall('.//rule'):
+            for rule in self._find(root, './/rule'):
                 ability = self._parse_rule_element(rule)
                 if ability:
                     rule_id = rule.get('id')
@@ -83,13 +129,19 @@ class BSDataParser:
             logger.info(f"Parsing catalog: {catalog_name}")
 
             # Parse all selection entries (units, weapons, etc.)
-            for entry in root.findall('.//selectionEntry'):
+            all_entries = self._find(root, './/selectionEntry')
+            logger.info(f"Found {len(all_entries)} selectionEntry elements")
+
+            for entry in all_entries:
                 unit = self._parse_selection_entry(entry, faction_name)
                 if unit:
                     self.catalog.add_unit(unit)
 
-            # Parse shared selection entries
-            for entry in root.findall('.//sharedSelectionEntry'):
+            # Parse shared selection entries (these are rare, usually selectionEntry inside sharedSelectionEntries)
+            shared_entries = self._find(root, './/sharedSelectionEntry')
+            logger.info(f"Found {len(shared_entries)} sharedSelectionEntry elements")
+
+            for entry in shared_entries:
                 unit = self._parse_selection_entry(entry, faction_name)
                 if unit:
                     self.catalog.add_unit(unit)
@@ -106,12 +158,20 @@ class BSDataParser:
         entry_id = entry.get('id', '')
         entry_name = entry.get('name', '')
 
-        # Skip non-unit entries for now
-        if entry_type not in ['unit', 'model', '']:
-            return None
-
         if not entry_name:
             return None
+
+        # Only process entries that look like units (have type='model' or 'unit' or have a Unit profile)
+        # We'll check for Unit profiles later, so be more permissive here
+        if entry_type in ['upgrade']:  # Skip pure upgrades
+            # But check if it has profiles that might indicate it's actually a unit
+            has_unit_profile = False
+            for profile in self._find(entry, './/profile'):
+                if profile.get('typeName') == 'Unit':
+                    has_unit_profile = True
+                    break
+            if not has_unit_profile:
+                return None
 
         # Create unit
         unit = Unit(
@@ -121,7 +181,7 @@ class BSDataParser:
         )
 
         # Parse profiles (unit stats, weapons, abilities)
-        for profile in entry.findall('.//profile'):
+        for profile in self._find(entry, './/profile'):
             parsed_profile = self._parse_profile_element(profile)
             if parsed_profile:
                 if parsed_profile.type_name == 'Unit':
@@ -144,17 +204,17 @@ class BSDataParser:
                     unit.abilities.append(ability)
 
         # Parse nested selection entries (weapons, equipment)
-        for nested_entry in entry.findall('.//selectionEntry'):
+        for nested_entry in self._find(entry, './/selectionEntry'):
             self._parse_nested_equipment(nested_entry, unit)
 
         # Parse rules/abilities
-        for rule in entry.findall('.//rule'):
+        for rule in self._find(entry, './/rule'):
             ability = self._parse_rule_element(rule)
             if ability:
                 unit.abilities.append(ability)
 
         # Parse costs
-        for cost in entry.findall('.//cost'):
+        for cost in self._find(entry, './/cost'):
             cost_type = cost.get('name', '')
             if cost_type == 'pts':
                 try:
@@ -163,19 +223,25 @@ class BSDataParser:
                     pass
 
         # Parse categories/keywords
-        for category_link in entry.findall('.//categoryLink'):
+        for category_link in self._find(entry, './/categoryLink'):
             category_name = category_link.get('name', '')
             if category_name:
                 unit.keywords.append(category_name)
 
-        return unit if (unit.unit_profile or unit.weapons) else None
+        # Only return units that have a unit profile or weapons
+        if unit.unit_profile or unit.weapons:
+            logger.debug(f"Loaded unit: {unit.name} (profile={unit.unit_profile is not None}, weapons={len(unit.weapons)})")
+            return unit
+        else:
+            logger.debug(f"Skipping {entry_name}: no profile or weapons")
+            return None
 
     def _parse_nested_equipment(self, entry: ET.Element, unit: Unit):
         """Parse nested equipment/weapons"""
         entry_type = entry.get('type', '')
 
         # Parse profiles from nested entries
-        for profile in entry.findall('.//profile'):
+        for profile in self._find(entry, './/profile'):
             parsed_profile = self._parse_profile_element(profile)
             if parsed_profile:
                 if parsed_profile.type_name in ['Ranged Weapons', 'Melee Weapons']:
@@ -198,7 +264,7 @@ class BSDataParser:
 
         characteristics = {}
 
-        for characteristic in profile.findall('.//characteristic'):
+        for characteristic in self._find(profile, './/characteristic'):
             char_name = characteristic.get('name', '')
             char_value = characteristic.text or ''
 
@@ -219,7 +285,7 @@ class BSDataParser:
         rule_name = rule.get('name', '')
         description = ''
 
-        desc_element = rule.find('.//description')
+        desc_element = self._find_one(rule, './/description')
         if desc_element is not None and desc_element.text:
             description = desc_element.text.strip()
 

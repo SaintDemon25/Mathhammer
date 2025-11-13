@@ -56,30 +56,35 @@
             <div class="step-content active" id="step-1">
                 <h2><i class="fas fa-crosshairs"></i> Configure Attacking Unit & Weapon</h2>
 
-                <!-- Unit Selection Card -->
-                <div class="card unit-select-card">
-                    <h3><i class="fas fa-user-shield"></i> Quick Unit Selection</h3>
-                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
-                        <i class="fas fa-magic"></i> Select a unit and weapon - stats and abilities will auto-load instantly!
+                <!-- Faction Selection -->
+                <div class="card">
+                    <h3><i class="fas fa-flag"></i> Step 1: Choose Your Faction</h3>
+                    <select id="attacker_faction" style="width: 100%; padding: 12px; font-size: 1.1rem; margin-top: 10px;">
+                        <option value="">-- Select Your Army --</option>
+                    </select>
+                </div>
+
+                <!-- Unit Selection -->
+                <div class="card" id="attacker-unit-card" style="display: none;">
+                    <h3><i class="fas fa-users"></i> Step 2: Choose Your Unit</h3>
+                    <div id="attacker-units-grid" class="unit-grid">
+                        <div class="section-loading">
+                            <div class="spinner large"></div>
+                            <p>Loading units...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Weapon Selection -->
+                <div class="card" id="attacker-weapon-card" style="display: none;">
+                    <h3><i class="fas fa-crosshairs"></i> Step 3: Choose Your Weapon</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 16px;">
+                        Select a weapon to auto-load all stats and abilities
                     </p>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="attacker_faction"><i class="fas fa-flag"></i> Faction</label>
-                            <select id="attacker_faction">
-                                <option value="">-- Select Faction --</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="attacker_unit"><i class="fas fa-users"></i> Unit</label>
-                            <select id="attacker_unit">
-                                <option value="">-- Select Unit --</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="attacker_weapon"><i class="fas fa-crosshairs"></i> Weapon</label>
-                            <select id="attacker_weapon">
-                                <option value="">-- Select Weapon --</option>
-                            </select>
+                    <div id="attacker-weapons-grid" class="weapons-container">
+                        <div class="section-loading">
+                            <div class="spinner large"></div>
+                            <p>Loading weapons...</p>
                         </div>
                     </div>
                 </div>
@@ -148,24 +153,21 @@
             <div class="step-content" id="step-2">
                 <h2><i class="fas fa-shield-alt"></i> Configure Defending Unit</h2>
 
-                <!-- Unit Selection Card -->
-                <div class="card unit-select-card">
-                    <h3><i class="fas fa-shield-alt"></i> Quick Target Selection</h3>
-                    <p style="color: var(--text-secondary); margin-bottom: 15px;">
-                        <i class="fas fa-magic"></i> Select a defending unit - stats and abilities will auto-load instantly!
-                    </p>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="defender_faction"><i class="fas fa-flag"></i> Faction</label>
-                            <select id="defender_faction">
-                                <option value="">-- Select Faction --</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="defender_unit"><i class="fas fa-users"></i> Unit</label>
-                            <select id="defender_unit">
-                                <option value="">-- Select Unit --</option>
-                            </select>
+                <!-- Faction Selection -->
+                <div class="card">
+                    <h3><i class="fas fa-flag"></i> Step 1: Choose Enemy Faction</h3>
+                    <select id="defender_faction" style="width: 100%; padding: 12px; font-size: 1.1rem; margin-top: 10px;">
+                        <option value="">-- Select Enemy Army --</option>
+                    </select>
+                </div>
+
+                <!-- Unit Selection -->
+                <div class="card" id="defender-unit-card" style="display: none;">
+                    <h3><i class="fas fa-users"></i> Step 2: Choose Enemy Unit</h3>
+                    <div id="defender-units-grid" class="unit-grid">
+                        <div class="section-loading">
+                            <div class="spinner large"></div>
+                            <p>Loading units...</p>
                         </div>
                     </div>
                 </div>

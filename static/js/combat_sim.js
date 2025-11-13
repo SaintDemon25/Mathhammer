@@ -175,111 +175,157 @@ async function loadFactions() {
 
 async function populateUnitsForFaction(role, faction) {
     try {
+        // Show the unit card section
+        const unitCard = document.getElementById(`${role}-unit-card`);
+        const unitsGrid = document.getElementById(`${role}-units-grid`);
+
+        unitCard.style.display = 'block';
+        unitsGrid.innerHTML = '<div class="section-loading"><div class="spinner large"></div><p>Loading units...</p></div>';
+
         const response = await fetch(`/api/units/selectable?faction=${encodeURIComponent(faction)}`);
         const data = await response.json();
 
-        const unitSelect = document.getElementById(`${role}_unit`);
-        if (!unitSelect) return;
+        // Clear and populate with unit cards
+        unitsGrid.innerHTML = '';
 
-        // Clear existing options
-        unitSelect.innerHTML = '<option value="">-- Select Unit --</option>';
+        if (data.units.length === 0) {
+            unitsGrid.innerHTML = '<div class="no-weapons-message"><i class="fas fa-exclamation-circle"></i><p>No units found for this faction</p></div>';
+            return;
+        }
 
-        // Populate with units from this faction
         data.units.forEach(unit => {
-            const option = document.createElement('option');
-            option.value = unit.id;
-            option.textContent = unit.name;
-            option.dataset.targetId = unit.target_id;
-            unitSelect.appendChild(option);
+            const card = document.createElement('div');
+            card.className = 'unit-card';
+            card.dataset.unitId = unit.id;
+
+            card.innerHTML = `
+                <div class="unit-card-name">${unit.name}</div>
+            `;
+
+            card.onclick = () => selectUnit(role, unit.id, card);
+            unitsGrid.appendChild(card);
         });
 
-        // Add change listener - auto-load when unit changes
-        if (role === 'attacker') {
-            // For attacker: load weapons when unit is selected
-            unitSelect.addEventListener('change', () => {
-                if (unitSelect.value) {
-                    populateWeaponsForUnit(unitSelect.value);
-                }
-            }, { once: false });
-        } else if (role === 'defender') {
-            // For defender: auto-load stats immediately when unit is selected
-            unitSelect.addEventListener('change', () => {
-                if (unitSelect.value) {
-                    loadDefenderFromUnit();
-                }
-            }, { once: false });
-        }
+        // Scroll to units section
+        unitCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
     } catch (error) {
         console.error('Error loading units:', error);
+        showToast('Failed to load units: ' + error.message, 'error');
+    }
+}
+
+async function selectUnit(role, unitId, cardElement) {
+    // Remove selected class from all unit cards
+    document.querySelectorAll(`#${role}-units-grid .unit-card`).forEach(c => c.classList.remove('selected'));
+    cardElement.classList.add('selected');
+
+    if (role === 'attacker') {
+        // Load weapons for this unit
+        await populateWeaponsForUnit(unitId);
+    } else if (role === 'defender') {
+        // Auto-load defender stats
+        await loadDefenderFromUnitId(unitId);
     }
 }
 
 async function populateWeaponsForUnit(unitId) {
     try {
+        // Show the weapon card section
+        const weaponCard = document.getElementById('attacker-weapon-card');
+        const weaponsGrid = document.getElementById('attacker-weapons-grid');
+
+        weaponCard.style.display = 'block';
+        weaponsGrid.innerHTML = '<div class="section-loading"><div class="spinner large"></div><p>Loading weapons...</p></div>';
+
         const response = await fetch(`/api/unit/${unitId}`);
         const data = await response.json();
 
-        const weaponSelect = document.getElementById('attacker_weapon');
-        if (!weaponSelect) return;
+        // Clear and populate with weapon cards
+        weaponsGrid.innerHTML = '';
 
-        // Clear existing options
-        weaponSelect.innerHTML = '<option value="">-- Select Weapon --</option>';
-
-        // Populate with weapons
-        if (data.weapons && data.weapons.length > 0) {
-            data.weapons.forEach((weapon, index) => {
-                const option = document.createElement('option');
-                option.value = index;
-                option.textContent = `${weapon.name} (${weapon.type})`;
-                option.dataset.weaponData = JSON.stringify(weapon);
-                weaponSelect.appendChild(option);
-            });
-
-            // Auto-select first weapon and load it automatically
-            if (data.weapons.length > 0) {
-                weaponSelect.selectedIndex = 1; // Select first weapon (skip the "-- Select Weapon --" option)
-                loadAttackerFromUnit(); // Auto-load immediately
-            }
-        } else {
-            const option = document.createElement('option');
-            option.value = '';
-            option.textContent = '(No weapons available)';
-            weaponSelect.appendChild(option);
+        if (!data.weapons || data.weapons.length === 0) {
+            weaponsGrid.innerHTML = '<div class="no-weapons-message"><i class="fas fa-crosshairs"></i><p>No weapons available for this unit</p></div>';
+            return;
         }
 
-        // Add change listener to auto-load when weapon changes
-        weaponSelect.addEventListener('change', () => {
-            if (weaponSelect.value) {
-                loadAttackerFromUnit();
+        // Create a card for EACH weapon
+        data.weapons.forEach((weapon, index) => {
+            const card = document.createElement('div');
+            card.className = 'weapon-card';
+            card.dataset.weaponIndex = index;
+            card.dataset.weaponData = JSON.stringify(weapon);
+
+            // Build abilities HTML
+            let abilitiesHTML = '';
+            if (weapon.abilities && weapon.abilities.length > 0) {
+                abilitiesHTML = '<div class="weapon-card-abilities">';
+                weapon.abilities.forEach(ability => {
+                    abilitiesHTML += `<span class="weapon-ability-badge">${ability}</span>`;
+                });
+                abilitiesHTML += '</div>';
             }
-        }, { once: false }); // Allow multiple changes
+
+            card.innerHTML = `
+                <div class="weapon-card-header">
+                    <div class="weapon-card-name">${weapon.name}</div>
+                    <div class="weapon-card-type">${weapon.type || 'Weapon'}</div>
+                </div>
+                <div class="weapon-card-stats">
+                    <div class="weapon-stat">
+                        <span class="weapon-stat-label">A</span>
+                        <span class="weapon-stat-value">${weapon.attacks || '-'}</span>
+                    </div>
+                    <div class="weapon-stat">
+                        <span class="weapon-stat-label">SK</span>
+                        <span class="weapon-stat-value">${weapon.skill || '-'}</span>
+                    </div>
+                    <div class="weapon-stat">
+                        <span class="weapon-stat-label">S</span>
+                        <span class="weapon-stat-value">${weapon.strength || '-'}</span>
+                    </div>
+                    <div class="weapon-stat">
+                        <span class="weapon-stat-label">AP</span>
+                        <span class="weapon-stat-value">${weapon.ap || '0'}</span>
+                    </div>
+                    <div class="weapon-stat">
+                        <span class="weapon-stat-label">D</span>
+                        <span class="weapon-stat-value">${weapon.damage || '-'}</span>
+                    </div>
+                </div>
+                ${abilitiesHTML}
+            `;
+
+            card.onclick = () => selectWeapon(card, weapon);
+            weaponsGrid.appendChild(card);
+        });
+
+        // Auto-select first weapon
+        if (data.weapons.length > 0) {
+            const firstCard = weaponsGrid.querySelector('.weapon-card');
+            selectWeapon(firstCard, data.weapons[0]);
+        }
+
+        // Scroll to weapons section
+        weaponCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
     } catch (error) {
         console.error('Error loading weapons:', error);
+        showToast('Failed to load weapons: ' + error.message, 'error');
     }
 }
 
-async function loadAttackerFromUnit() {
+function selectWeapon(cardElement, weaponData) {
+    // Remove selected class from all weapon cards
+    document.querySelectorAll('#attacker-weapons-grid .weapon-card').forEach(c => c.classList.remove('selected'));
+    cardElement.classList.add('selected');
+
+    // Auto-fill stats from weapon
+    loadWeaponStats(weaponData);
+}
+
+function loadWeaponStats(weaponData) {
     try {
-        const unitId = document.getElementById('attacker_unit').value;
-        const weaponSelect = document.getElementById('attacker_weapon');
-        const selectedWeaponIndex = weaponSelect.value;
-
-        if (!unitId) {
-            showToast('Please select a unit first', 'warning');
-            return;
-        }
-
-        if (!selectedWeaponIndex) {
-            showToast('Please select a weapon', 'warning');
-            return;
-        }
-
-        const loadingToast = showLoading('Loading weapon stats...');
-
-        // Get weapon data from the selected option
-        const selectedOption = weaponSelect.options[weaponSelect.selectedIndex];
-        const weaponData = JSON.parse(selectedOption.dataset.weaponData);
-
         // Auto-fill attacker fields
         document.getElementById('num_attacks').value = parseAttacks(weaponData.attacks) || 1;
         document.getElementById('skill').value = parseSkill(weaponData.skill) || 4;
@@ -300,27 +346,14 @@ async function loadAttackerFromUnit() {
         if (weaponData.abilities && weaponData.abilities.length > 0) {
             applyWeaponAbilities(weaponData.abilities);
         }
-
-        closeToast(loadingToast.querySelector('.toast-close'));
-        // Success - stats loaded automatically, no need for toast spam
-
     } catch (error) {
-        console.error('Error loading attacker from unit:', error);
-        showToast('Error loading unit data: ' + error.message, 'error');
+        console.error('Error loading weapon stats:', error);
+        showToast('Error loading weapon stats: ' + error.message, 'error');
     }
 }
 
-async function loadDefenderFromUnit() {
+async function loadDefenderFromUnitId(unitId) {
     try {
-        const unitId = document.getElementById('defender_unit').value;
-
-        if (!unitId) {
-            showToast('Please select a unit first', 'warning');
-            return;
-        }
-
-        const loadingToast = showLoading('Loading unit profile...');
-
         // Get unit data
         const response = await fetch(`/api/unit/${unitId}`);
         const data = await response.json();
@@ -344,17 +377,19 @@ async function loadDefenderFromUnit() {
             if (data.profile.abilities && data.profile.abilities.length > 0) {
                 applyDefenderAbilities(data.profile.abilities);
             }
-
-            closeToast(loadingToast.querySelector('.toast-close'));
-            // Success - profile loaded automatically
-        } else {
-            closeToast(loadingToast.querySelector('.toast-close'));
-            showToast('This unit has no profile data available', 'warning');
         }
 
     } catch (error) {
         console.error('Error loading defender from unit:', error);
         showToast('Error loading unit data: ' + error.message, 'error');
+    }
+}
+
+// OLD FUNCTION - KEPT FOR BACKWARD COMPAT (not used anymore)
+async function loadDefenderFromUnit() {
+    const unitId = document.getElementById('defender_unit')?.value;
+    if (unitId) {
+        await loadDefenderFromUnitId(unitId);
     }
 }
 

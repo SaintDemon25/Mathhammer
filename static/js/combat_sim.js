@@ -193,13 +193,21 @@ async function populateUnitsForFaction(role, faction) {
             unitSelect.appendChild(option);
         });
 
-        // Add change listener for weapon loading (attacker only)
+        // Add change listener - auto-load when unit changes
         if (role === 'attacker') {
+            // For attacker: load weapons when unit is selected
             unitSelect.addEventListener('change', () => {
                 if (unitSelect.value) {
                     populateWeaponsForUnit(unitSelect.value);
                 }
-            });
+            }, { once: false });
+        } else if (role === 'defender') {
+            // For defender: auto-load stats immediately when unit is selected
+            unitSelect.addEventListener('change', () => {
+                if (unitSelect.value) {
+                    loadDefenderFromUnit();
+                }
+            }, { once: false });
         }
     } catch (error) {
         console.error('Error loading units:', error);
@@ -226,12 +234,25 @@ async function populateWeaponsForUnit(unitId) {
                 option.dataset.weaponData = JSON.stringify(weapon);
                 weaponSelect.appendChild(option);
             });
+
+            // Auto-select first weapon and load it automatically
+            if (data.weapons.length > 0) {
+                weaponSelect.selectedIndex = 1; // Select first weapon (skip the "-- Select Weapon --" option)
+                loadAttackerFromUnit(); // Auto-load immediately
+            }
         } else {
             const option = document.createElement('option');
             option.value = '';
             option.textContent = '(No weapons available)';
             weaponSelect.appendChild(option);
         }
+
+        // Add change listener to auto-load when weapon changes
+        weaponSelect.addEventListener('change', () => {
+            if (weaponSelect.value) {
+                loadAttackerFromUnit();
+            }
+        }, { once: false }); // Allow multiple changes
     } catch (error) {
         console.error('Error loading weapons:', error);
     }
@@ -281,7 +302,7 @@ async function loadAttackerFromUnit() {
         }
 
         closeToast(loadingToast.querySelector('.toast-close'));
-        showToast(`Loaded weapon stats for ${weaponData.name}`, 'success');
+        // Success - stats loaded automatically, no need for toast spam
 
     } catch (error) {
         console.error('Error loading attacker from unit:', error);
@@ -325,7 +346,7 @@ async function loadDefenderFromUnit() {
             }
 
             closeToast(loadingToast.querySelector('.toast-close'));
-            showToast(`Loaded profile for ${data.name}`, 'success');
+            // Success - profile loaded automatically
         } else {
             closeToast(loadingToast.querySelector('.toast-close'));
             showToast('This unit has no profile data available', 'warning');
@@ -428,7 +449,7 @@ function applyWeaponAbilities(abilities) {
         }
     });
 
-    showToast(`Applied ${abilities.length} weapon abilities`, 'info', 'Abilities Loaded', 2000);
+    // Abilities applied - visual feedback from checked boxes is enough
 }
 
 function applyDefenderAbilities(abilities) {
@@ -452,9 +473,7 @@ function applyDefenderAbilities(abilities) {
         }
     });
 
-    if (abilities.length > 0) {
-        showToast(`Applied ${abilities.length} defender abilities`, 'info', 'Abilities Loaded', 2000);
-    }
+    // Abilities applied - visual feedback from checked boxes is enough
 }
 
 function validateInput(input) {

@@ -251,21 +251,31 @@ def get_unit(unit_id):
     unit_abilities = []
     if unit.unit_profile and hasattr(unit.unit_profile, 'characteristics'):
         try:
-            for char in unit.unit_profile.characteristics:
-                # Handle Characteristic objects
-                if hasattr(char, 'name') and hasattr(char, 'value'):
-                    char_name = char.name
-                    char_value = char.value
-                elif isinstance(char, dict):
-                    char_name = char.get('name', '')
-                    char_value = char.get('value', '')
-                else:
-                    continue
+            # Check if characteristics is a dict (it should be)
+            if isinstance(unit.unit_profile.characteristics, dict):
+                # Look for Keywords or Abilities characteristic
+                for key in ['Keywords', 'Abilities', 'keywords', 'abilities']:
+                    if key in unit.unit_profile.characteristics:
+                        char = unit.unit_profile.characteristics[key]
+                        char_value = char.value if hasattr(char, 'value') else str(char)
+                        if char_value and char_value.strip():
+                            unit_abilities.extend([a.strip() for a in char_value.split(',')])
+                        break
+            else:
+                # Fallback
+                for char in unit.unit_profile.characteristics:
+                    if hasattr(char, 'name') and hasattr(char, 'value'):
+                        char_name = char.name
+                        char_value = char.value
+                    elif isinstance(char, dict):
+                        char_name = char.get('name', '')
+                        char_value = char.get('value', '')
+                    else:
+                        continue
 
-                if char_name and char_name.lower() in ['keywords', 'abilities']:
-                    # Parse comma-separated abilities
-                    if char_value:
-                        unit_abilities.extend([a.strip() for a in char_value.split(',')])
+                    if char_name and char_name.lower() in ['keywords', 'abilities']:
+                        if char_value:
+                            unit_abilities.extend([a.strip() for a in char_value.split(',')])
         except Exception as e:
             logger.warning(f"Error extracting unit abilities: {e}")
 
@@ -300,21 +310,33 @@ def extract_weapon_abilities(weapon):
         return abilities
 
     try:
-        for char in weapon.characteristics:
-            # Handle Characteristic objects
-            if hasattr(char, 'name') and hasattr(char, 'value'):
-                char_name = char.name
-                char_value = char.value
-            elif isinstance(char, dict):
-                char_name = char.get('name', '')
-                char_value = char.get('value', '')
-            else:
-                continue
+        # Check if characteristics is a dict (it should be)
+        if isinstance(weapon.characteristics, dict):
+            # Look for Keywords or Abilities characteristic
+            for key in ['Keywords', 'Abilities', 'keywords', 'abilities']:
+                if key in weapon.characteristics:
+                    char = weapon.characteristics[key]
+                    # Get the value from the Characteristic object
+                    char_value = char.value if hasattr(char, 'value') else str(char)
+                    if char_value and char_value.strip():
+                        # Parse comma-separated abilities
+                        abilities.extend([a.strip() for a in char_value.split(',')])
+                    break
+        else:
+            # Fallback: iterate through characteristics
+            for char in weapon.characteristics:
+                if hasattr(char, 'name') and hasattr(char, 'value'):
+                    char_name = char.name
+                    char_value = char.value
+                elif isinstance(char, dict):
+                    char_name = char.get('name', '')
+                    char_value = char.get('value', '')
+                else:
+                    continue
 
-            if char_name and char_name.lower() in ['keywords', 'abilities']:
-                # Parse comma-separated abilities
-                if char_value:
-                    abilities.extend([a.strip() for a in char_value.split(',')])
+                if char_name and char_name.lower() in ['keywords', 'abilities']:
+                    if char_value:
+                        abilities.extend([a.strip() for a in char_value.split(',')])
     except Exception as e:
         logger.warning(f"Error extracting weapon abilities: {e}")
 

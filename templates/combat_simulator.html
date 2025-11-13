@@ -58,33 +58,30 @@
 
                 <!-- Unit Selection Card -->
                 <div class="card unit-select-card">
-                    <h3><i class="fas fa-user-shield"></i> Select Unit (Optional)</h3>
+                    <h3><i class="fas fa-user-shield"></i> Quick Unit Selection</h3>
                     <p style="color: var(--text-secondary); margin-bottom: 15px;">
-                        Choose a unit from your loaded dataset to auto-fill stats, or enter manually below.
+                        <i class="fas fa-magic"></i> Select a unit and weapon - stats and abilities will auto-load instantly!
                     </p>
                     <div class="form-grid">
                         <div class="form-group">
-                            <label for="attacker_faction">Faction</label>
+                            <label for="attacker_faction"><i class="fas fa-flag"></i> Faction</label>
                             <select id="attacker_faction">
                                 <option value="">-- Select Faction --</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="attacker_unit">Unit</label>
+                            <label for="attacker_unit"><i class="fas fa-users"></i> Unit</label>
                             <select id="attacker_unit">
                                 <option value="">-- Select Unit --</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="attacker_weapon">Weapon</label>
+                            <label for="attacker_weapon"><i class="fas fa-crosshairs"></i> Weapon</label>
                             <select id="attacker_weapon">
                                 <option value="">-- Select Weapon --</option>
                             </select>
                         </div>
                     </div>
-                    <button class="btn btn-secondary" onclick="loadAttackerFromUnit()" style="margin-top: 10px;">
-                        <i class="fas fa-download"></i> Load Unit Stats
-                    </button>
                 </div>
 
                 <div class="card">
@@ -153,27 +150,24 @@
 
                 <!-- Unit Selection Card -->
                 <div class="card unit-select-card">
-                    <h3><i class="fas fa-shield-alt"></i> Select Target Unit (Optional)</h3>
+                    <h3><i class="fas fa-shield-alt"></i> Quick Target Selection</h3>
                     <p style="color: var(--text-secondary); margin-bottom: 15px;">
-                        Choose a unit from your loaded dataset to auto-fill stats, or enter manually below.
+                        <i class="fas fa-magic"></i> Select a defending unit - stats and abilities will auto-load instantly!
                     </p>
                     <div class="form-grid">
                         <div class="form-group">
-                            <label for="defender_faction">Faction</label>
+                            <label for="defender_faction"><i class="fas fa-flag"></i> Faction</label>
                             <select id="defender_faction">
                                 <option value="">-- Select Faction --</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="defender_unit">Unit</label>
+                            <label for="defender_unit"><i class="fas fa-users"></i> Unit</label>
                             <select id="defender_unit">
                                 <option value="">-- Select Unit --</option>
                             </select>
                         </div>
                     </div>
-                    <button class="btn btn-secondary" onclick="loadDefenderFromUnit()" style="margin-top: 10px;">
-                        <i class="fas fa-download"></i> Load Unit Stats
-                    </button>
                 </div>
 
                 <div class="card">

@@ -12,7 +12,7 @@ from combat_engine import (
     CombatSimulator, WeaponAbilities, UnitAbilities, AttackType,
     AttackSequenceResult, DiceRoll
 )
-from mathhammer.parser import BSDataParser
+from enhanced_parser import EnhancedBSDataParser
 from mathhammer.models import DataCatalog
 
 app = Flask(__name__)
@@ -20,7 +20,7 @@ app.config['SECRET_KEY'] = 'combat-sim-secret-key'
 
 # Global data
 catalog = DataCatalog()
-parser = BSDataParser()
+parser = EnhancedBSDataParser()
 
 
 @app.route('/')
@@ -155,17 +155,18 @@ def simulate_combat():
 
 @app.route('/api/load-units', methods=['POST'])
 def load_units():
-    """Load units from BSData"""
+    """Load units from BSData with enhanced parsing"""
     global catalog, parser
 
     try:
         dataset_path = Path('datasets')
-        parser = BSDataParser()
-        catalog = parser.load_dataset(str(dataset_path))
+        parser = EnhancedBSDataParser()
+        catalog = parser.load_dataset_enhanced(str(dataset_path))
 
         return jsonify({
             'success': True,
             'units_loaded': len(catalog.units),
+            'selectable_units': len(parser.selectable_units),
             'factions': catalog.factions
         })
     except Exception as e:
@@ -173,6 +174,46 @@ def load_units():
             'success': False,
             'error': str(e)
         }), 400
+
+
+@app.route('/api/units/selectable', methods=['GET'])
+def get_selectable_units():
+    """Get list of selectable units organized by faction"""
+    faction = request.args.get('faction', None)
+
+    if faction:
+        units = [u for u in parser.selectable_units if u['faction'] == faction]
+    else:
+        units = parser.selectable_units
+
+    return jsonify({
+        'units': units,
+        'count': len(units)
+    })
+
+
+@app.route('/api/units/by-category', methods=['GET'])
+def get_units_by_category():
+    """Get units organized by battlefield role"""
+    faction = request.args.get('faction', None)
+    categorized = parser.get_units_by_category()
+
+    # Filter by faction if specified
+    if faction:
+        for category in categorized:
+            categorized[category] = [
+                {'id': u.id, 'name': u.name, 'faction': u.faction}
+                for u in categorized[category]
+                if u.faction == faction
+            ]
+    else:
+        for category in categorized:
+            categorized[category] = [
+                {'id': u.id, 'name': u.name, 'faction': u.faction}
+                for u in categorized[category]
+            ]
+
+    return jsonify(categorized)
 
 
 @app.route('/api/units', methods=['GET'])
@@ -278,9 +319,11 @@ if __name__ == '__main__':
     try:
         dataset_path = Path('datasets')
         if dataset_path.exists() and any(dataset_path.glob('*.cat')):
-            catalog = parser.load_dataset(str(dataset_path))
-            print(f"Loaded {len(catalog.units)} units on startup")
+            catalog = parser.load_dataset_enhanced(str(dataset_path))
+            print(f"✓ Loaded {len(catalog.units)} units from {len(catalog.factions)} factions")
+            print(f"✓ {len(parser.selectable_units)} selectable units")
     except Exception as e:
-        print(f"Could not load dataset on startup: {e}")
+        print(f"⚠ Could not load dataset on startup: {e}")
+        print("  You can load it later using the 'Load Dataset' button")
 
     app.run(debug=True, host='0.0.0.0', port=5000)

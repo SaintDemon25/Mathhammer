@@ -7,6 +7,7 @@ const totalSteps = 4;
 document.addEventListener('DOMContentLoaded', () => {
     initializeEventListeners();
     updateAttackTypeLabel();
+    loadFactions(); // Load available factions
 });
 
 function initializeEventListeners() {
@@ -41,6 +42,237 @@ function addInputValidation() {
             validateInput(input);
         });
     });
+}
+
+// ===== UNIT LOADING FUNCTIONS =====
+
+async function loadFactions() {
+    try {
+        // First, try to load units from dataset
+        const loadResponse = await fetch('/api/load-units', {
+            method: 'POST'
+        });
+        const loadResult = await loadResponse.json();
+
+        if (!loadResult.success) {
+            console.log('No units loaded yet:', loadResult.error);
+            return;
+        }
+
+        // Get list of selectable units
+        const response = await fetch('/api/units/selectable');
+        const data = await response.json();
+
+        if (data.units && data.units.length > 0) {
+            // Extract unique factions
+            const factions = [...new Set(data.units.map(u => u.faction))].sort();
+
+            // Populate attacker faction dropdown
+            const attackerFactionSelect = document.getElementById('attacker_faction');
+            if (attackerFactionSelect) {
+                factions.forEach(faction => {
+                    const option = document.createElement('option');
+                    option.value = faction;
+                    option.textContent = faction;
+                    attackerFactionSelect.appendChild(option);
+                });
+
+                // Add change listener
+                attackerFactionSelect.addEventListener('change', () => {
+                    populateUnitsForFaction('attacker', attackerFactionSelect.value);
+                });
+            }
+
+            // Populate defender faction dropdown
+            const defenderFactionSelect = document.getElementById('defender_faction');
+            if (defenderFactionSelect) {
+                factions.forEach(faction => {
+                    const option = document.createElement('option');
+                    option.value = faction;
+                    option.textContent = faction;
+                    defenderFactionSelect.appendChild(option);
+                });
+
+                // Add change listener
+                defenderFactionSelect.addEventListener('change', () => {
+                    populateUnitsForFaction('defender', defenderFactionSelect.value);
+                });
+            }
+
+            console.log(`Loaded ${data.count} units from ${factions.length} factions`);
+        }
+    } catch (error) {
+        console.error('Error loading factions:', error);
+    }
+}
+
+async function populateUnitsForFaction(role, faction) {
+    try {
+        const response = await fetch(`/api/units/selectable?faction=${encodeURIComponent(faction)}`);
+        const data = await response.json();
+
+        const unitSelect = document.getElementById(`${role}_unit`);
+        if (!unitSelect) return;
+
+        // Clear existing options
+        unitSelect.innerHTML = '<option value="">-- Select Unit --</option>';
+
+        // Populate with units from this faction
+        data.units.forEach(unit => {
+            const option = document.createElement('option');
+            option.value = unit.id;
+            option.textContent = unit.name;
+            option.dataset.targetId = unit.target_id;
+            unitSelect.appendChild(option);
+        });
+
+        // Add change listener for weapon loading (attacker only)
+        if (role === 'attacker') {
+            unitSelect.addEventListener('change', () => {
+                if (unitSelect.value) {
+                    populateWeaponsForUnit(unitSelect.value);
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error loading units:', error);
+    }
+}
+
+async function populateWeaponsForUnit(unitId) {
+    try {
+        const response = await fetch(`/api/unit/${unitId}`);
+        const data = await response.json();
+
+        const weaponSelect = document.getElementById('attacker_weapon');
+        if (!weaponSelect) return;
+
+        // Clear existing options
+        weaponSelect.innerHTML = '<option value="">-- Select Weapon --</option>';
+
+        // Populate with weapons
+        if (data.weapons && data.weapons.length > 0) {
+            data.weapons.forEach((weapon, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${weapon.name} (${weapon.type})`;
+                option.dataset.weaponData = JSON.stringify(weapon);
+                weaponSelect.appendChild(option);
+            });
+        } else {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = '(No weapons available)';
+            weaponSelect.appendChild(option);
+        }
+    } catch (error) {
+        console.error('Error loading weapons:', error);
+    }
+}
+
+async function loadAttackerFromUnit() {
+    try {
+        const unitId = document.getElementById('attacker_unit').value;
+        const weaponSelect = document.getElementById('attacker_weapon');
+        const selectedWeaponIndex = weaponSelect.value;
+
+        if (!unitId) {
+            alert('Please select a unit first');
+            return;
+        }
+
+        if (!selectedWeaponIndex) {
+            alert('Please select a weapon');
+            return;
+        }
+
+        // Get weapon data from the selected option
+        const selectedOption = weaponSelect.options[weaponSelect.selectedIndex];
+        const weaponData = JSON.parse(selectedOption.dataset.weaponData);
+
+        // Auto-fill attacker fields
+        document.getElementById('num_attacks').value = parseAttacks(weaponData.attacks) || 1;
+        document.getElementById('skill').value = weaponData.skill || 4;
+        document.getElementById('strength').value = weaponData.strength || 4;
+        document.getElementById('ap').value = Math.abs(weaponData.ap || 0);
+        document.getElementById('damage').value = weaponData.damage || '1';
+
+        // Set attack type based on weapon type
+        const attackType = document.getElementById('attack_type');
+        if (weaponData.type && weaponData.type.toLowerCase().includes('melee')) {
+            attackType.value = 'melee';
+        } else {
+            attackType.value = 'ranged';
+        }
+        updateAttackTypeLabel();
+
+        // Show success message
+        console.log(`Loaded weapon: ${weaponData.name}`);
+        alert(`✓ Loaded weapon stats for ${weaponData.name}`);
+
+    } catch (error) {
+        console.error('Error loading attacker from unit:', error);
+        alert('Error loading unit data: ' + error.message);
+    }
+}
+
+async function loadDefenderFromUnit() {
+    try {
+        const unitId = document.getElementById('defender_unit').value;
+
+        if (!unitId) {
+            alert('Please select a unit first');
+            return;
+        }
+
+        // Get unit data
+        const response = await fetch(`/api/unit/${unitId}`);
+        const data = await response.json();
+
+        if (data.profile) {
+            // Auto-fill defender fields
+            if (data.profile.toughness) {
+                document.getElementById('toughness').value = data.profile.toughness;
+            }
+            if (data.profile.save) {
+                document.getElementById('save').value = data.profile.save;
+            }
+            if (data.profile.wounds) {
+                document.getElementById('wounds_per_model').value = data.profile.wounds;
+            }
+
+            // Show success message
+            console.log(`Loaded unit: ${data.name}`);
+            alert(`✓ Loaded profile for ${data.name}`);
+        } else {
+            alert('This unit has no profile data available');
+        }
+
+    } catch (error) {
+        console.error('Error loading defender from unit:', error);
+        alert('Error loading unit data: ' + error.message);
+    }
+}
+
+function parseAttacks(attacksStr) {
+    // Parse attacks value (could be "2", "D6", "2D6", etc.)
+    if (!attacksStr) return 1;
+
+    // If it's a number, return it
+    const num = parseInt(attacksStr);
+    if (!isNaN(num)) return num;
+
+    // If it's dice notation, return average value
+    if (attacksStr.includes('D6')) {
+        const multiplier = attacksStr.replace('D6', '') || '1';
+        return parseInt(multiplier) * 3.5; // Average of D6
+    }
+    if (attacksStr.includes('D3')) {
+        const multiplier = attacksStr.replace('D3', '') || '1';
+        return parseInt(multiplier) * 2; // Average of D3
+    }
+
+    return 1; // Default
 }
 
 function validateInput(input) {

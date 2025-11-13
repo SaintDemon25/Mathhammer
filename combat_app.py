@@ -14,9 +14,13 @@ from combat_engine import (
 )
 from enhanced_parser import EnhancedBSDataParser
 from mathhammer.models import DataCatalog
+from army_builder_api import army_builder_bp
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'combat-sim-secret-key'
+
+# Register blueprints
+app.register_blueprint(army_builder_bp)
 
 # Global data
 catalog = DataCatalog()
@@ -27,6 +31,12 @@ parser = EnhancedBSDataParser()
 def index():
     """Main combat simulator page"""
     return render_template('combat_simulator.html')
+
+
+@app.route('/army-builder')
+def army_builder():
+    """Army builder page"""
+    return render_template('army_builder.html')
 
 
 @app.route('/api/simulate', methods=['POST'])

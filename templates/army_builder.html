@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warhammer 40k Army Builder - Mathhammer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/combat_sim.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/army_builder.css') }}">
+</head>
+<body>
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <div class="container">
+        <header>
+            <h1>⚔️ Warhammer 40k Army Builder</h1>
+            <p class="subtitle">Build your army list with full 10th edition rules</p>
+            <nav>
+                <a href="/" class="nav-link">← Combat Simulator</a>
+                <button id="new-army-btn" class="btn btn-primary">New Army</button>
+                <button id="load-army-btn" class="btn btn-secondary">Load Army</button>
+                <button id="save-army-btn" class="btn btn-success">Save Army</button>
+            </nav>
+        </header>
+
+        <!-- Army Header -->
+        <div class="card army-header" id="army-header">
+            <div class="army-info">
+                <h2 id="army-name-display">New Army</h2>
+                <div class="army-meta">
+                    <span><strong>Faction:</strong> <span id="army-faction">-</span></span>
+                    <span><strong>Detachment:</strong> <span id="army-detachment">-</span></span>
+                    <span class="points-display">
+                        <strong>Points:</strong>
+                        <span id="army-points">0</span> / <span id="army-points-limit">2000</span>
+                    </span>
+                </div>
+            </div>
+            <button id="edit-army-btn" class="btn btn-secondary">Edit Details</button>
+        </div>
+
+        <!-- Main Content -->
+        <div class="army-builder-content">
+            <!-- Unit Browser -->
+            <div class="unit-browser">
+                <h3>Available Units</h3>
+
+                <!-- Faction Filter -->
+                <div class="filter-section">
+                    <label for="faction-select">Faction:</label>
+                    <select id="faction-select">
+                        <option value="">Select Faction</option>
+                    </select>
+                </div>
+
+                <!-- Category Tabs -->
+                <div class="category-tabs" id="category-tabs">
+                    <button class="category-tab active" data-category="all">All</button>
+                    <button class="category-tab" data-category="HQ">HQ</button>
+                    <button class="category-tab" data-category="Troops">Troops</button>
+                    <button class="category-tab" data-category="Elites">Elites</button>
+                    <button class="category-tab" data-category="Fast Attack">Fast Attack</button>
+                    <button class="category-tab" data-category="Heavy Support">Heavy Support</button>
+                    <button class="category-tab" data-category="Dedicated Transport">Transports</button>
+                </div>
+
+                <!-- Unit List -->
+                <div id="unit-list" class="unit-list">
+                    <p class="placeholder">Select a faction to browse units</p>
+                </div>
+            </div>
+
+            <!-- Army Roster -->
+            <div class="army-roster">
+                <h3>Army Roster</h3>
+                <div id="roster-list" class="roster-list">
+                    <p class="placeholder">Add units to your army</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: New/Edit Army -->
+    <div id="army-details-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="modal-title">New Army</h2>
+            <form id="army-details-form">
+                <div class="form-group">
+                    <label for="input-army-name">Army Name:</label>
+                    <input type="text" id="input-army-name" required placeholder="My Space Marines">
+                </div>
+
+                <div class="form-group">
+                    <label for="input-faction">Faction:</label>
+                    <select id="input-faction" required>
+                        <option value="">Select Faction</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="input-detachment">Detachment:</label>
+                    <input type="text" id="input-detachment" value="Gladius Strike Force">
+                </div>
+
+                <div class="form-group">
+                    <label for="input-points-limit">Points Limit:</label>
+                    <select id="input-points-limit">
+                        <option value="1000">Incursion (1,000 pts)</option>
+                        <option value="2000" selected>Strike Force (2,000 pts)</option>
+                        <option value="3000">Onslaught (3,000 pts)</option>
+                    </select>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" id="cancel-army-btn" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Army</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Load Army -->
+    <div id="load-army-modal" class="modal">
+        <div class="modal-content">
+            <h2>Load Army</h2>
+            <div id="saved-armies-list" class="saved-armies-list">
+                <p>Loading...</p>
+            </div>
+            <div class="modal-actions">
+                <button id="cancel-load-btn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/army_builder.js') }}"></script>
+</body>
+</html>

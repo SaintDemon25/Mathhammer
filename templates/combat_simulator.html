@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warhammer 40k Combat Simulator - 10th Edition</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/combat_sim.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-skull"></i> Warhammer 40,000 Combat Simulator</h1>
+            <p class="subtitle">10th Edition - Full Rules Implementation</p>
+        </header>
+
+        <!-- Progress Steps -->
+        <div class="steps-container">
+            <div class="step active" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-label">Attacker</div>
+            </div>
+            <div class="step" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-label">Defender</div>
+            </div>
+            <div class="step" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-label">Abilities</div>
+            </div>
+            <div class="step" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-label">Simulate</div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Step 1: Attacker Configuration -->
+            <div class="step-content active" id="step-1">
+                <h2><i class="fas fa-crosshairs"></i> Configure Attacking Unit & Weapon</h2>
+
+                <div class="card">
+                    <h3>Weapon Profile</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="num_attacks">
+                                Number of Attacks
+                                <span class="tooltip" data-tip="Total number of attack dice to roll">ⓘ</span>
+                            </label>
+                            <input type="number" id="num_attacks" value="10" min="1" max="100">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="attack_type">Attack Type</label>
+                            <select id="attack_type">
+                                <option value="ranged">Ranged (BS)</option>
+                                <option value="melee">Melee (WS)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="skill">
+                                <span id="skill-label">Ballistic Skill (BS)</span>
+                                <span class="tooltip" data-tip="Target number needed to hit (e.g., 3 for 3+)">ⓘ</span>
+                            </label>
+                            <input type="number" id="skill" value="3" min="2" max="6">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="strength">
+                                Strength (S)
+                                <span class="tooltip" data-tip="Compared against target Toughness for wound rolls">ⓘ</span>
+                            </label>
+                            <input type="number" id="strength" value="4" min="1" max="20">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ap">
+                                Armor Penetration (AP)
+                                <span class="tooltip" data-tip="Reduces target's armor save (e.g., -1, -2, -3)">ⓘ</span>
+                            </label>
+                            <input type="number" id="ap" value="0" min="-6" max="0">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="damage">
+                                Damage (D)
+                                <span class="tooltip" data-tip="Wounds inflicted per failed save (e.g., 1, 2, D3, D6, D6+2)">ⓘ</span>
+                            </label>
+                            <input type="text" id="damage" value="1" placeholder="1, D3, D6, 2D6">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-container">
+                    <button class="btn btn-primary btn-next" onclick="nextStep()">
+                        Next <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: Defender Configuration -->
+            <div class="step-content" id="step-2">
+                <h2><i class="fas fa-shield-alt"></i> Configure Defending Unit</h2>
+
+                <div class="card">
+                    <h3>Unit Profile</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="toughness">
+                                Toughness (T)
+                                <span class="tooltip" data-tip="Compared against attacker Strength for wound rolls">ⓘ</span>
+                            </label>
+                            <input type="number" id="toughness" value="4" min="1" max="20">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="save">
+                                Armor Save (Sv)
+                                <span class="tooltip" data-tip="Target number for armor saves (e.g., 3 for 3+)">ⓘ</span>
+                            </label>
+                            <input type="number" id="save" value="3" min="2" max="7">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="invuln">
+                                Invulnerable Save
+                                <span class="tooltip" data-tip="Cannot be modified by AP (e.g., 4 for 4++). Leave blank if none">ⓘ</span>
+                            </label>
+                            <input type="number" id="invuln" placeholder="None" min="2" max="6">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="wounds_per_model">
+                                Wounds per Model (W)
+                                <span class="tooltip" data-tip="How many wounds each model has">ⓘ</span>
+                            </label>
+                            <input type="number" id="wounds_per_model" value="2" min="1" max="30">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="unit_size">
+                                Unit Size
+                                <span class="tooltip" data-tip="Number of models in the unit">ⓘ</span>
+                            </label>
+                            <input type="number" id="unit_size" value="5" min="1" max="30">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-container">
+                    <button class="btn btn-secondary btn-prev" onclick="prevStep()">
+                        <i class="fas fa-arrow-left"></i> Previous
+                    </button>
+                    <button class="btn btn-primary btn-next" onclick="nextStep()">
+                        Next <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 3: Abilities Configuration -->
+            <div class="step-content" id="step-3">
+                <h2><i class="fas fa-star"></i> Configure Special Abilities</h2>
+
+                <div class="abilities-container">
+                    <!-- Weapon Abilities -->
+                    <div class="card">
+                        <h3><i class="fas fa-bolt"></i> Weapon Abilities</h3>
+
+                        <div class="abilities-grid">
+                            <div class="ability-toggle">
+                                <input type="checkbox" id="lethal_hits">
+                                <label for="lethal_hits">
+                                    <strong>Lethal Hits</strong>
+                                    <span class="ability-desc">Critical hits automatically wound</span>
+                                </label>
+                            </div>
+
+                            <div class="ability-toggle">
+                                <input type="checkbox" id="devastating_wounds">
+                                <label for="devastating_wounds">
+                                    <strong>Devastating Wounds</strong>
+                                    <span class="ability-desc">Critical wounds bypass all saves</span>
+                                </label>
+                            </div>
+
+                            <div class="ability-toggle">
+                                <input type="checkbox" id="twin_linked">
+                                <label for="twin_linked">
+                                    <strong>Twin-linked</strong>
+                                    <span class="ability-desc">Re-roll wound rolls</span>
+                                </label>
+                            </div>
+
+                            <div class="ability-toggle">
+                                <input type="checkbox" id="torrent">
+                                <label for="torrent">
+                                    <strong>Torrent</strong>
+                                    <span class="ability-desc">Automatically hits (no hit roll)</span>
+                                </label>
+                            </div>
+
+                            <div class="ability-toggle">
+                                <input type="checkbox" id="blast">
+                                <label for="blast">
+                                    <strong>Blast</strong>
+                                    <span class="ability-desc">Bonus attacks vs large units</span>
+                                </label>
+                            </div>
+
+                            <div class="ability-toggle">
+                                <input type="checkbox" id="ignores_cover">
+                                <label for="ignores_cover">
+                                    <strong>Ignores Cover</strong>
+                                    <span class="ability-desc">Target doesn't benefit from cover</span>
+                                </label>
+                            </div>
+
+                            <div class="ability-toggle">
+                                <input type="checkbox" id="hazardous">
+                                <label for="hazardous">
+                                    <strong>Hazardous</strong>
+                                    <span class="ability-desc">Risk of self-damage on use</span>
+                                </label>
+                            </div>
+
+                            <div class="ability-toggle">
+                                <input type="checkbox" id="precision">
+                                <label for="precision">
+                                    <strong>Precision</strong>
+                                    <span class="ability-desc">Can target characters</span>
+                                </label>
+                            </div>
+
+                            <div class="ability-toggle">
+                                <input type="checkbox" id="heavy">
+                                <label for="heavy">
+                                    <strong>Heavy</strong>
+                                    <span class="ability-desc">-1 to hit if moved</span>
+                                </label>
+                            </div>
+
+                            <div class="ability-toggle">
+                                <input type="checkbox" id="assault">
+                                <label for="assault">
+                                    <strong>Assault</strong>
+                                    <span class="ability-desc">No penalty for shooting after Advance</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Numerical Abilities -->
+                        <div class="form-grid" style="margin-top: 20px;">
+                            <div class="form-group">
+                                <label for="sustained_hits">
+                                    Sustained Hits X
+                                    <span class="tooltip" data-tip="Critical hits generate X additional hits">ⓘ</span>
+                                </label>
+                                <input type="number" id="sustained_hits" placeholder="None" min="1" max="6">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="melta">
+                                    Melta X
+                                    <span class="tooltip" data-tip="Extra damage within half range">ⓘ</span>
+                                </label>
+                                <input type="number" id="melta" placeholder="None" min="1" max="6">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="rapid_fire">
+                                    Rapid Fire X
+                                    <span class="tooltip" data-tip="X extra attacks within half range">ⓘ</span>
+                                </label>
+                                <input type="number" id="rapid_fire" placeholder="None" min="1" max="10">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="anti">
+                                    Anti-X Y+
+                                    <span class="tooltip" data-tip="e.g., 'INFANTRY 4+' makes wound rolls of 4+ critical vs INFANTRY">ⓘ</span>
+                                </label>
+                                <input type="text" id="anti" placeholder="e.g., INFANTRY 4+">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Defensive Abilities -->
+                    <div class="card">
+                        <h3><i class="fas fa-shield-virus"></i> Defender Abilities</h3>
+
+                        <div class="abilities-grid">
+                            <div class="ability-toggle">
+                                <input type="checkbox" id="stealth">
+                                <label for="stealth">
+                                    <strong>Stealth</strong>
+                                    <span class="ability-desc">-1 to hit from ranged attacks</span>
+                                </label>
+                            </div>
+
+                            <div class="ability-toggle">
+                                <input type="checkbox" id="cover">
+                                <label for="cover">
+                                    <strong>In Cover</strong>
+                                    <span class="ability-desc">+1 to armor saves</span>
+                                </label>
+                            </div>
+
+                            <div class="ability-toggle">
+                                <input type="checkbox" id="lone_operative">
+                                <label for="lone_operative">
+                                    <strong>Lone Operative</strong>
+                                    <span class="ability-desc">Can only be targeted within 12"</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-grid" style="margin-top: 20px;">
+                            <div class="form-group">
+                                <label for="feel_no_pain">
+                                    Feel No Pain X+
+                                    <span class="tooltip" data-tip="Roll to ignore each point of damage (e.g., 5 for 5+)">ⓘ</span>
+                                </label>
+                                <input type="number" id="feel_no_pain" placeholder="None" min="2" max="6">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="target_keywords">
+                                    Target Keywords
+                                    <span class="tooltip" data-tip="Comma-separated (e.g., INFANTRY, IMPERIUM)">ⓘ</span>
+                                </label>
+                                <input type="text" id="target_keywords" placeholder="e.g., INFANTRY, IMPERIUM">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="cover_bonus">
+                                    Cover Bonus
+                                    <span class="tooltip" data-tip="Bonus to saves from cover (usually +1)">ⓘ</span>
+                                </label>
+                                <input type="number" id="cover_bonus" value="1" min="1" max="2">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Re-roll Abilities -->
+                    <div class="card">
+                        <h3><i class="fas fa-dice"></i> Re-roll Abilities</h3>
+
+                        <div class="abilities-grid">
+                            <div class="ability-toggle">
+                                <input type="checkbox" id="reroll_all_hits">
+                                <label for="reroll_all_hits">
+                                    <strong>Re-roll All Hit Rolls</strong>
+                                    <span class="ability-desc">Re-roll failed hits</span>
+                                </label>
+                            </div>
+
+                            <div class="ability-toggle">
+                                <input type="checkbox" id="reroll_hit_1s">
+                                <label for="reroll_hit_1s">
+                                    <strong>Re-roll Hit Rolls of 1</strong>
+                                    <span class="ability-desc">Re-roll 1s to hit</span>
+                                </label>
+                            </div>
+
+                            <div class="ability-toggle">
+                                <input type="checkbox" id="reroll_all_wounds">
+                                <label for="reroll_all_wounds">
+                                    <strong>Re-roll All Wound Rolls</strong>
+                                    <span class="ability-desc">Re-roll failed wounds</span>
+                                </label>
+                            </div>
+
+                            <div class="ability-toggle">
+                                <input type="checkbox" id="reroll_wound_1s">
+                                <label for="reroll_wound_1s">
+                                    <strong>Re-roll Wound Rolls of 1</strong>
+                                    <span class="ability-desc">Re-roll 1s to wound</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Context -->
+                    <div class="card">
+                        <h3><i class="fas fa-cog"></i> Combat Context</h3>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="range_to_target">Range to Target (inches)</label>
+                                <input type="number" id="range_to_target" value="24" min="1" max="72">
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="attacker_moved">
+                                    Attacker Moved This Turn
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-container">
+                    <button class="btn btn-secondary btn-prev" onclick="prevStep()">
+                        <i class="fas fa-arrow-left"></i> Previous
+                    </button>
+                    <button class="btn btn-primary btn-next" onclick="nextStep()">
+                        Next <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 4: Simulate & Results -->
+            <div class="step-content" id="step-4">
+                <h2><i class="fas fa-chart-bar"></i> Run Simulation</h2>
+
+                <div class="card">
+                    <h3>Simulation Options</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="num_simulations">
+                                Number of Simulations
+                                <span class="tooltip" data-tip="Run multiple times for statistical averages">ⓘ</span>
+                            </label>
+                            <select id="num_simulations">
+                                <option value="1">1 (Single Run)</option>
+                                <option value="10">10 (Quick Average)</option>
+                                <option value="100" selected>100 (Good Statistics)</option>
+                                <option value="1000">1000 (Precise)</option>
+                                <option value="10000">10,000 (Very Precise)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-large btn-success" onclick="runSimulation()">
+                        <i class="fas fa-play"></i> RUN SIMULATION
+                    </button>
+                </div>
+
+                <!-- Results Section -->
+                <div id="results-container" class="results-container" style="display: none;">
+                    <div class="card">
+                        <h3><i class="fas fa-trophy"></i> Simulation Results</h3>
+                        <div id="results-content"></div>
+                    </div>
+
+                    <div class="card">
+                        <h3><i class="fas fa-chart-line"></i> Detailed Statistics</h3>
+                        <div id="stats-content"></div>
+                    </div>
+                </div>
+
+                <div class="button-container">
+                    <button class="btn btn-secondary btn-prev" onclick="prevStep()">
+                        <i class="fas fa-arrow-left"></i> Previous
+                    </button>
+                    <button class="btn btn-primary" onclick="resetSimulator()">
+                        <i class="fas fa-redo"></i> Start Over
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/combat_sim.js') }}"></script>
+</body>
+</html>

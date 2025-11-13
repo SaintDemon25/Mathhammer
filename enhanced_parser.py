@@ -20,6 +20,7 @@ class EnhancedBSDataParser(BSDataParser):
         super().__init__()
         self.entry_link_map = {}  # Maps entry link IDs to unit names
         self.selectable_units = []  # List of units that can be selected
+        self.shared_definitions = {}  # Maps targetId to actual weapon/equipment definitions
 
     def parse_catalog_with_entry_links(self, file_path: str, faction_name: Optional[str] = None) -> DataCatalog:
         """Parse catalog and build proper unit list from entryLinks"""
@@ -33,14 +34,18 @@ class EnhancedBSDataParser(BSDataParser):
 
             logger.info(f"Parsing catalog: {catalog_name}")
 
-            # First, parse all shared selection entries (actual unit definitions)
+            # FIRST: Build a map of ALL shared definitions by targetId
+            logger.info("Building shared definitions map...")
+            self._build_shared_definitions_map(root)
+
+            # Second, parse all shared selection entries (actual unit definitions)
             unit_definitions = {}
             shared_entries = self._find(root, './/selectionEntry')
             logger.info(f"Found {len(shared_entries)} unit definitions")
 
             for entry in shared_entries:
                 entry_id = entry.get('id')
-                unit = self._parse_selection_entry(entry, faction_name)
+                unit = self._parse_selection_entry_enhanced(entry, faction_name)
                 if unit:
                     unit_definitions[entry_id] = unit
 
@@ -87,6 +92,117 @@ class EnhancedBSDataParser(BSDataParser):
         except Exception as e:
             logger.error(f"Error parsing catalog: {e}", exc_info=True)
             raise
+
+    def _build_shared_definitions_map(self, root: ET.Element):
+        """Build a map of all shared selection entries for weapon/equipment lookups"""
+        # Find all sharedSelectionEntries
+        for entry in self._find(root, './/selectionEntry'):
+            entry_id = entry.get('id')
+            if entry_id:
+                self.shared_definitions[entry_id] = entry
+
+        logger.info(f"Built shared definitions map with {len(self.shared_definitions)} entries")
+
+    def _parse_selection_entry_enhanced(self, entry: ET.Element, faction: str) -> Optional[Unit]:
+        """Enhanced parsing that follows entryLinks and resolves weapons recursively"""
+        entry_type = entry.get('type', '')
+        entry_id = entry.get('id', '')
+        entry_name = entry.get('name', '')
+
+        if not entry_name:
+            return None
+
+        # Create unit
+        unit = Unit(
+            id=entry_id,
+            name=entry_name,
+            faction=faction
+        )
+
+        # Parse profiles (unit stats, abilities)
+        for profile in self._find(entry, './/profile'):
+            parsed_profile = self._parse_profile_element(profile)
+            if parsed_profile:
+                if parsed_profile.type_name == 'Unit':
+                    unit.unit_profile = UnitProfile(
+                        name=parsed_profile.name,
+                        type_name=parsed_profile.type_name,
+                        characteristics=parsed_profile.characteristics
+                    )
+                elif parsed_profile.type_name in ['Ranged Weapons', 'Melee Weapons']:
+                    weapon = WeaponProfile(
+                        name=parsed_profile.name,
+                        type_name=parsed_profile.type_name,
+                        characteristics=parsed_profile.characteristics
+                    )
+                    unit.weapons.append(weapon)
+                elif parsed_profile.type_name == 'Abilities':
+                    desc = parsed_profile.get_value('Description') or ''
+                    from mathhammer.models import Ability
+                    ability = Ability(name=parsed_profile.name, description=desc)
+                    unit.abilities.append(ability)
+
+        # ENHANCED: Parse selectionEntryGroups recursively and follow entryLinks
+        self._parse_weapons_from_entry_groups(entry, unit)
+
+        # Parse nested selection entries (weapons, equipment)
+        for nested_entry in self._find(entry, './/selectionEntry'):
+            self._parse_nested_equipment_enhanced(nested_entry, unit)
+
+        # Parse categories/keywords
+        for category_link in self._find(entry, './/categoryLink'):
+            category_name = category_link.get('name', '')
+            if category_name:
+                unit.keywords.append(category_name)
+
+        # Return unit even without weapons (we'll get them from nested structures)
+        if unit.unit_profile or unit.weapons:
+            logger.debug(f"Loaded unit: {unit.name} (profile={unit.unit_profile is not None}, weapons={len(unit.weapons)})")
+            return unit
+        else:
+            logger.debug(f"Skipping {entry_name}: no profile or weapons")
+            return None
+
+    def _parse_weapons_from_entry_groups(self, entry: ET.Element, unit: Unit):
+        """Recursively parse selectionEntryGroups and follow entryLinks to find weapons"""
+        # Find all selectionEntryGroups
+        for group in self._find(entry, './/selectionEntryGroup'):
+            # Look for entryLinks within this group (use .// to find all descendants)
+            for entry_link in self._find(group, './/entryLink'):
+                target_id = entry_link.get('targetId', '')
+                link_type = entry_link.get('type', '')
+
+                # Resolve the entryLink to actual definition
+                if target_id in self.shared_definitions:
+                    linked_entry = self.shared_definitions[target_id]
+
+                    # Parse weapons from the linked entry (use .// to find all nested profiles)
+                    for profile in self._find(linked_entry, './/profile'):
+                        parsed_profile = self._parse_profile_element(profile)
+                        if parsed_profile and parsed_profile.type_name in ['Ranged Weapons', 'Melee Weapons']:
+                            weapon = WeaponProfile(
+                                name=parsed_profile.name,
+                                type_name=parsed_profile.type_name,
+                                characteristics=parsed_profile.characteristics
+                            )
+                            # Check if weapon already exists
+                            if not any(w.name == weapon.name for w in unit.weapons):
+                                unit.weapons.append(weapon)
+
+    def _parse_nested_equipment_enhanced(self, entry: ET.Element, unit: Unit):
+        """Enhanced nested equipment parsing"""
+        # Parse profiles from nested entries
+        for profile in self._find(entry, 'profile'):
+            parsed_profile = self._parse_profile_element(profile)
+            if parsed_profile and parsed_profile.type_name in ['Ranged Weapons', 'Melee Weapons']:
+                weapon = WeaponProfile(
+                    name=parsed_profile.name,
+                    type_name=parsed_profile.type_name,
+                    characteristics=parsed_profile.characteristics
+                )
+                # Check if weapon already exists
+                if not any(w.name == weapon.name for w in unit.weapons):
+                    unit.weapons.append(weapon)
 
     def get_selectable_units_list(self) -> List[Dict]:
         """Get list of units that can be selected (from entryLinks)"""

@@ -260,13 +260,30 @@ def calculate_combat():
             total_damages = [r.total_damage + mortal_wounds_bonus for r in results]
             models_killed = [r.models_destroyed for r in results]
 
+            # Calculate damage distribution (histogram)
+            from collections import Counter
+            damage_distribution = Counter(total_damages)
+            models_distribution = Counter(models_killed)
+
+            # Convert to percentage distribution for visualization
+            damage_dist_percent = {
+                dmg: (count / num_simulations) * 100
+                for dmg, count in damage_distribution.items()
+            }
+            models_dist_percent = {
+                models: (count / num_simulations) * 100
+                for models, count in models_distribution.items()
+            }
+
             stats = {
                 'min_damage': min(total_damages),
                 'max_damage': max(total_damages),
                 'avg_damage': sum(total_damages) / len(total_damages),
                 'min_models_killed': min(models_killed),
                 'max_models_killed': max(models_killed),
-                'avg_models_killed': sum(models_killed) / len(models_killed)
+                'avg_models_killed': sum(models_killed) / len(models_killed),
+                'damage_distribution': sorted(damage_dist_percent.items()),
+                'models_distribution': sorted(models_dist_percent.items())
             }
         else:
             # Single simulation

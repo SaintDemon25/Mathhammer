@@ -605,6 +605,28 @@ function displayResults(data) {
                 ` : ''}
             </div>
 
+            <div class="result-breakdown">
+                <h4 style="color: #4CAF50;">⚡ Efficiency Metrics</h4>
+                <div class="efficiency-metrics">
+                    <div class="efficiency-metric">
+                        <span class="efficiency-metric-value">${((result.num_hits / result.num_attacks) * 100).toFixed(1)}%</span>
+                        <span class="efficiency-metric-label">Hit Rate</span>
+                    </div>
+                    <div class="efficiency-metric">
+                        <span class="efficiency-metric-value">${result.num_hits > 0 ? ((result.num_wounds / result.num_hits) * 100).toFixed(1) : 0}%</span>
+                        <span class="efficiency-metric-label">Wound Rate</span>
+                    </div>
+                    <div class="efficiency-metric">
+                        <span class="efficiency-metric-value">${result.num_wounds > 0 ? ((result.num_saves_failed / result.num_wounds) * 100).toFixed(1) : 0}%</span>
+                        <span class="efficiency-metric-label">Save Failure Rate</span>
+                    </div>
+                    <div class="efficiency-metric">
+                        <span class="efficiency-metric-value">${(summary.wounds_dealt / result.num_attacks).toFixed(2)}</span>
+                        <span class="efficiency-metric-label">Damage Per Attack</span>
+                    </div>
+                </div>
+            </div>
+
             ${stats ? `
             <div class="result-breakdown">
                 <h4 style="color: #d4af37;">📊 Statistics (${numSims} rolls)</h4>
@@ -617,6 +639,38 @@ function displayResults(data) {
                     <span>${stats.min_models_killed} - ${stats.max_models_killed} (avg: ${stats.avg_models_killed.toFixed(1)})</span>
                 </div>
             </div>
+
+            ${stats.damage_distribution && stats.damage_distribution.length > 0 && numSims >= 100 ? `
+            <div class="result-breakdown">
+                <h4 style="color: #d4af37;">📈 Damage Probability Distribution</h4>
+                <div class="distribution-chart">
+                    ${stats.damage_distribution.map(([damage, percent]) => `
+                        <div class="distribution-row">
+                            <span class="distribution-label">${damage} dmg</span>
+                            <div class="distribution-bar-container">
+                                <div class="distribution-bar" style="width: ${percent}%"></div>
+                                <span class="distribution-percent">${percent.toFixed(1)}%</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+
+            <div class="result-breakdown">
+                <h4 style="color: #d4af37;">🎯 Models Killed Probability</h4>
+                <div class="distribution-chart">
+                    ${stats.models_distribution.map(([models, percent]) => `
+                        <div class="distribution-row">
+                            <span class="distribution-label">${models} models</span>
+                            <div class="distribution-bar-container">
+                                <div class="distribution-bar models-bar" style="width: ${percent}%"></div>
+                                <span class="distribution-percent">${percent.toFixed(1)}%</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
             ` : ''}
 
             ${data.stratagems_applied && data.stratagems_applied.length > 0 ? `
@@ -719,10 +773,13 @@ function displayComparisonResults(results, numSims) {
                         <th>Wounds</th>
                         <th>Damage</th>
                         <th class="highlight">Models Killed</th>
+                        <th>Efficiency</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${sortedResults.map((r, idx) => `
+                    ${sortedResults.map((r, idx) => {
+                        const efficiency = r.data.summary.wounds_dealt / r.data.result.num_attacks;
+                        return `
                         <tr class="${idx === 0 ? 'best-result' : ''}">
                             <td class="weapon-name">
                                 ${idx === 0 ? '<i class="fas fa-trophy" style="color: #d4af37; margin-right: 5px;"></i>' : ''}
@@ -733,8 +790,10 @@ function displayComparisonResults(results, numSims) {
                             <td>${fmt(r.data.result.num_wounds)}</td>
                             <td>${fmt(r.data.summary.wounds_dealt)}</td>
                             <td class="highlight"><strong>${fmt(r.data.summary.models_killed)}</strong></td>
+                            <td><strong>${efficiency.toFixed(2)}</strong> dmg/atk</td>
                         </tr>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </tbody>
             </table>
         </div>

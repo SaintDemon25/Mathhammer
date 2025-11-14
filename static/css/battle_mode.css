@@ -797,3 +797,120 @@
     font-weight: bold;
     font-size: 0.9rem;
 }
+
+/* Probability Distribution Visualization */
+.distribution-chart {
+    margin-top: 15px;
+}
+
+.distribution-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 10px;
+}
+
+.distribution-label {
+    min-width: 80px;
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.distribution-bar-container {
+    flex: 1;
+    position: relative;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.distribution-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #d4af37, #f4d03f);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    box-shadow: 0 2px 4px rgba(212, 175, 55, 0.3);
+}
+
+.distribution-bar.models-bar {
+    background: linear-gradient(90deg, #e94560, #ff6b81);
+    box-shadow: 0 2px 4px rgba(233, 69, 96, 0.3);
+}
+
+.distribution-percent {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Efficiency Metrics */
+.efficiency-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.efficiency-metric {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.05));
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+}
+
+.efficiency-metric-value {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--accent-color);
+    display: block;
+    margin-bottom: 5px;
+}
+
+.efficiency-metric-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.efficiency-rating {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-top: 8px;
+}
+
+.efficiency-rating.excellent {
+    background: #4CAF50;
+    color: white;
+}
+
+.efficiency-rating.good {
+    background: #8BC34A;
+    color: white;
+}
+
+.efficiency-rating.average {
+    background: #FFC107;
+    color: #1a1a2e;
+}
+
+.efficiency-rating.poor {
+    background: #FF9800;
+    color: white;
+}
+
+.efficiency-rating.very-poor {
+    background: #f44336;
+    color: white;
+}

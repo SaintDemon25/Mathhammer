@@ -126,22 +126,35 @@
 
                 <!-- Weapon Selection -->
                 <div class="weapon-selection-section" id="weapon-selection" style="display: none;">
-                    <h4>Select Weapon</h4>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="margin: 0;">Select Weapon(s)</h4>
+                        <button id="comparison-mode-btn" class="btn btn-secondary btn-small" onclick="toggleComparisonMode()">
+                            <i class="fas fa-balance-scale"></i> Enable Comparison Mode
+                        </button>
+                    </div>
                     <div id="weapon-list" class="weapon-cards-grid"></div>
                 </div>
 
                 <!-- Simulation Options & Calculate Button -->
                 <div class="calculate-section" id="calculate-section" style="display: none;">
                     <div class="simulation-options">
-                        <label for="num-simulations">
-                            <i class="fas fa-dice"></i> Simulation Iterations:
-                        </label>
-                        <select id="num-simulations" class="sim-select">
-                            <option value="1">1 (Single Roll)</option>
-                            <option value="10">10 (Quick Average)</option>
-                            <option value="100" selected>100 (Statistical)</option>
-                            <option value="1000">1000 (Precise)</option>
-                        </select>
+                        <div class="sim-option-group">
+                            <label for="defender-unit-size">
+                                <i class="fas fa-users"></i> Defender Unit Size:
+                            </label>
+                            <input type="number" id="defender-unit-size" class="sim-input" value="10" min="1" max="20" />
+                        </div>
+                        <div class="sim-option-group">
+                            <label for="num-simulations">
+                                <i class="fas fa-dice"></i> Simulation Iterations:
+                            </label>
+                            <select id="num-simulations" class="sim-select">
+                                <option value="1">1 (Single Roll)</option>
+                                <option value="10">10 (Quick Average)</option>
+                                <option value="100" selected>100 (Statistical)</option>
+                                <option value="1000">1000 (Precise)</option>
+                            </select>
+                        </div>
                     </div>
                     <button id="calculate-btn" class="btn btn-success btn-large">
                         ⚔️ Calculate Combat

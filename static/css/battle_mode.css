@@ -412,6 +412,13 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.sim-option-group {
+    display: flex;
+    align-items: center;
     gap: 10px;
 }
 
@@ -421,24 +428,33 @@
     display: flex;
     align-items: center;
     gap: 5px;
+    white-space: nowrap;
 }
 
-.sim-select {
+.sim-select, .sim-input {
     padding: 8px 15px;
     background: var(--surface-light);
     border: 1px solid var(--border-color);
     border-radius: 6px;
     color: var(--text-primary);
     font-size: 0.95rem;
-    cursor: pointer;
     transition: all 0.3s ease;
 }
 
-.sim-select:hover {
+.sim-select {
+    cursor: pointer;
+}
+
+.sim-input {
+    width: 80px;
+    text-align: center;
+}
+
+.sim-select:hover, .sim-input:hover {
     border-color: var(--accent-color);
 }
 
-.sim-select:focus {
+.sim-select:focus, .sim-input:focus {
     outline: none;
     border-color: var(--accent-color);
     box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
@@ -677,4 +693,107 @@
     .stratagems-list {
         grid-template-columns: 1fr;
     }
+}
+
+/* Weapon Comparison Table */
+.comparison-table {
+    margin: 20px 0;
+    overflow-x: auto;
+}
+
+.results-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface-light);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.results-table thead {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+}
+
+.results-table th {
+    padding: 15px;
+    text-align: left;
+    color: var(--accent-color);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.results-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.results-table tbody tr:hover {
+    background: rgba(212, 175, 55, 0.05);
+}
+
+.results-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.results-table .weapon-name {
+    font-weight: 600;
+    color: var(--accent-color);
+}
+
+.results-table .highlight {
+    background: rgba(212, 175, 55, 0.1);
+    font-weight: 600;
+}
+
+.results-table .best-result {
+    background: linear-gradient(90deg, rgba(212, 175, 55, 0.15), transparent);
+}
+
+.results-table .best-result td {
+    color: var(--accent-color);
+}
+
+.comparison-stats {
+    margin-top: 20px;
+    padding: 20px;
+    background: var(--surface-light);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.comparison-stats h4 {
+    margin-top: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+}
+
+/* Weapon card multi-select visual */
+.weapon-battle-card.selected {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+}
+
+.weapon-battle-card.selected::after {
+    content: '✓';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--accent-color);
+    color: var(--background);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
 }

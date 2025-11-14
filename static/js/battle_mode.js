@@ -12,6 +12,10 @@ let selectedDefenderUnit = null;
 let selectedWeapon = null;
 let loadingFor = null; // 'army1' or 'army2'
 
+// Comparison mode
+let comparisonMode = false;
+let selectedWeapons = []; // For comparison mode
+
 // CP Tracking
 let cpTotal = 10;
 let cpRemaining = 10;
@@ -389,10 +393,29 @@ function createWeaponCard(weapon) {
     `;
 
     card.addEventListener('click', () => {
-        document.querySelectorAll('.weapon-battle-card').forEach(c => c.classList.remove('selected'));
-        card.classList.add('selected');
-        selectedWeapon = weapon;
-        checkReadyForCalculation();
+        if (comparisonMode) {
+            // Multi-select mode
+            const index = selectedWeapons.findIndex(w => w.name === weapon.name);
+            if (index > -1) {
+                selectedWeapons.splice(index, 1);
+                card.classList.remove('selected');
+            } else {
+                if (selectedWeapons.length < 5) { // Limit to 5 weapons
+                    selectedWeapons.push(weapon);
+                    card.classList.add('selected');
+                } else {
+                    showToast('Maximum 5 weapons for comparison', 'warning');
+                }
+            }
+            checkReadyForCalculation();
+        } else {
+            // Single select mode
+            document.querySelectorAll('.weapon-battle-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            selectedWeapon = weapon;
+            selectedWeapons = [weapon]; // Keep selectedWeapons in sync
+            checkReadyForCalculation();
+        }
     });
 
     return card;
@@ -400,25 +423,41 @@ function createWeaponCard(weapon) {
 
 function checkReadyForCalculation() {
     const calculateSection = document.getElementById('calculate-section');
+    const calculateBtn = document.getElementById('calculate-btn');
 
-    if (selectedAttackerUnit && selectedDefenderUnit && selectedWeapon) {
+    const ready = selectedAttackerUnit && selectedDefenderUnit &&
+                  (comparisonMode ? selectedWeapons.length > 0 : selectedWeapon);
+
+    if (ready) {
         calculateSection.style.display = 'block';
+        if (comparisonMode && selectedWeapons.length > 1) {
+            calculateBtn.innerHTML = `<i class="fas fa-balance-scale"></i> Compare ${selectedWeapons.length} Weapons`;
+        } else {
+            calculateBtn.innerHTML = `⚔️ Calculate Combat`;
+        }
     } else {
         calculateSection.style.display = 'none';
     }
 }
 
 async function calculateCombat() {
-    if (!selectedAttackerUnit || !selectedDefenderUnit || !selectedWeapon) {
-        showToast('Please select attacker, defender, and weapon', 'warning');
+    if (!selectedAttackerUnit || !selectedDefenderUnit || selectedWeapons.length === 0) {
+        showToast('Please select attacker, defender, and weapon(s)', 'warning');
+        return;
+    }
+
+    // If in comparison mode with multiple weapons, run comparison
+    if (comparisonMode && selectedWeapons.length > 1) {
+        await runWeaponComparison();
         return;
     }
 
     try {
         showToast('Calculating combat...', 'info');
 
-        // Get number of simulations
+        // Get simulation parameters
         const numSimulations = parseInt(document.getElementById('num-simulations').value) || 1;
+        const defenderUnitSize = parseInt(document.getElementById('defender-unit-size').value) || 10;
 
         const response = await fetch('/api/battle/calculate-combat', {
             method: 'POST',
@@ -438,7 +477,7 @@ async function calculateCombat() {
                     save: parseInt(selectedDefenderUnit.fullData.save.replace('+', '')),
                     invuln: selectedDefenderUnit.fullData.invuln ? parseInt(selectedDefenderUnit.fullData.invuln.replace('+', '')) : null,
                     wounds: parseInt(selectedDefenderUnit.fullData.wounds),
-                    unit_size: 10, // TODO: Get from unit composition
+                    unit_size: defenderUnitSize,
                     keywords: selectedDefenderUnit.fullData.categories || []
                 },
                 combat_type: selectedCombatType,
@@ -598,6 +637,129 @@ function displayResults(data) {
     resultsSection.scrollIntoView({ behavior: 'smooth' });
 }
 
+async function runWeaponComparison() {
+    showToast(`Comparing ${selectedWeapons.length} weapons...`, 'info');
+
+    const numSimulations = parseInt(document.getElementById('num-simulations').value) || 1;
+    const defenderUnitSize = parseInt(document.getElementById('defender-unit-size').value) || 10;
+
+    try {
+        // Run combat for each weapon
+        const results = await Promise.all(selectedWeapons.map(async (weapon) => {
+            const response = await fetch('/api/battle/calculate-combat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    attacker_unit: {
+                        name: selectedAttackerUnit.unit_name,
+                        id: selectedAttackerUnit.unit_id
+                    },
+                    attacker_weapon: weapon,
+                    defender_unit: {
+                        name: selectedDefenderUnit.unit_name,
+                        id: selectedDefenderUnit.unit_id,
+                        toughness: parseInt(selectedDefenderUnit.fullData.toughness),
+                        save: parseInt(selectedDefenderUnit.fullData.save.replace('+', '')),
+                        invuln: selectedDefenderUnit.fullData.invuln ? parseInt(selectedDefenderUnit.fullData.invuln.replace('+', '')) : null,
+                        wounds: parseInt(selectedDefenderUnit.fullData.wounds),
+                        unit_size: defenderUnitSize,
+                        keywords: selectedDefenderUnit.fullData.categories || []
+                    },
+                    combat_type: selectedCombatType,
+                    active_stratagems: activeStratagems,
+                    num_simulations: numSimulations
+                })
+            });
+
+            const data = await response.json();
+            return {
+                weapon: weapon,
+                data: data
+            };
+        }));
+
+        displayComparisonResults(results, numSimulations);
+        showToast('Comparison complete!', 'success');
+    } catch (error) {
+        console.error('Error running comparison:', error);
+        showToast('Failed to compare weapons', 'error');
+    }
+}
+
+function displayComparisonResults(results, numSims) {
+    const resultsSection = document.getElementById('battle-results');
+    const resultsContent = document.getElementById('results-content');
+
+    const fmt = (val) => numSims > 1 ? val.toFixed(1) : Math.round(val);
+
+    // Sort by models killed (descending)
+    const sortedResults = [...results].sort((a, b) =>
+        b.data.summary.models_killed - a.data.summary.models_killed
+    );
+
+    resultsContent.innerHTML = `
+        <div class="results-summary">
+            <div class="results-title">
+                <i class="fas fa-balance-scale"></i> Weapon Comparison${numSims > 1 ? ` (${numSims} iterations)` : ''}
+            </div>
+            <div class="results-matchup">
+                ${results[0].data.summary.attacker.split(' with ')[0]} vs ${results[0].data.summary.defender}
+            </div>
+        </div>
+
+        <div class="comparison-table">
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>Weapon</th>
+                        <th>Attacks</th>
+                        <th>Hits</th>
+                        <th>Wounds</th>
+                        <th>Damage</th>
+                        <th class="highlight">Models Killed</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${sortedResults.map((r, idx) => `
+                        <tr class="${idx === 0 ? 'best-result' : ''}">
+                            <td class="weapon-name">
+                                ${idx === 0 ? '<i class="fas fa-trophy" style="color: #d4af37; margin-right: 5px;"></i>' : ''}
+                                ${r.weapon.name}
+                            </td>
+                            <td>${r.data.result.num_attacks}</td>
+                            <td>${fmt(r.data.result.num_hits)}</td>
+                            <td>${fmt(r.data.result.num_wounds)}</td>
+                            <td>${fmt(r.data.summary.wounds_dealt)}</td>
+                            <td class="highlight"><strong>${fmt(r.data.summary.models_killed)}</strong></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+
+        ${numSims > 1 && sortedResults[0].data.stats ? `
+        <div class="comparison-stats">
+            <h4 style="color: #d4af37;">📊 Best Weapon Statistics</h4>
+            <div class="result-breakdown">
+                <div class="result-item">
+                    <span>Best: ${sortedResults[0].weapon.name}</span>
+                    <span>${fmt(sortedResults[0].data.summary.models_killed)} models killed avg</span>
+                </div>
+                <div class="result-item">
+                    <span>Damage Range:</span>
+                    <span>${sortedResults[0].data.stats.min_damage} - ${sortedResults[0].data.stats.max_damage}</span>
+                </div>
+            </div>
+        </div>
+        ` : ''}
+    `;
+
+    resultsSection.style.display = 'block';
+    resultsSection.scrollIntoView({ behavior: 'smooth' });
+}
+
 // Utility functions
 function showModal(modalId) {
     document.getElementById(modalId).classList.add('show');
@@ -745,6 +907,36 @@ function resetCP() {
 
     updateCPDisplay();
     showToast('Command Points reset to ' + cpTotal, 'success');
+}
+
+function toggleComparisonMode() {
+    comparisonMode = !comparisonMode;
+    const btn = document.getElementById('comparison-mode-btn');
+
+    if (comparisonMode) {
+        btn.innerHTML = '<i class="fas fa-check-square"></i> Disable Comparison Mode';
+        btn.classList.remove('btn-secondary');
+        btn.classList.add('btn-primary');
+        selectedWeapons = selectedWeapon ? [selectedWeapon] : [];
+        showToast('Comparison mode enabled - select multiple weapons', 'info');
+    } else {
+        btn.innerHTML = '<i class="fas fa-balance-scale"></i> Enable Comparison Mode';
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-secondary');
+        // Keep only the first weapon selected
+        selectedWeapon = selectedWeapons.length > 0 ? selectedWeapons[0] : null;
+        selectedWeapons = selectedWeapon ? [selectedWeapon] : [];
+        // Update visual selection
+        document.querySelectorAll('.weapon-battle-card').forEach(c => c.classList.remove('selected'));
+        if (selectedWeapon) {
+            const cards = Array.from(document.querySelectorAll('.weapon-battle-card'));
+            const selectedCard = cards.find(card => card.textContent.includes(selectedWeapon.name));
+            if (selectedCard) selectedCard.classList.add('selected');
+        }
+        showToast('Comparison mode disabled', 'info');
+    }
+
+    checkReadyForCalculation();
 }
 
 function showToast(message, type = 'info') {

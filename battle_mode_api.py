@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 
 from combat_engine import CombatSimulator, WeaponAbilities, UnitAbilities, AttackType
 from mathhammer.models import Army
+from stratagems import apply_stratagem_to_combat, get_stratagem_by_id
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +97,7 @@ def get_available_weapons():
 
 @battle_mode_bp.route('/calculate-combat', methods=['POST'])
 def calculate_combat():
-    """Calculate combat between two units"""
+    """Calculate combat between two units with stratagem effects"""
     try:
         data = request.json
 
@@ -107,6 +108,9 @@ def calculate_combat():
 
         # Defender data
         defender_unit = data.get('defender_unit')
+
+        # Active stratagems
+        active_stratagems = data.get('active_stratagems', [])
 
         # Extract weapon stats
         attacks_str = attacker_weapon.get('attacks', '1')
@@ -173,6 +177,43 @@ def calculate_combat():
         defender_keywords = defender_unit.get('keywords', [])
         # TODO: Parse FNP and other defensive abilities from unit data
 
+        # Apply stratagem effects
+        combat_params = {
+            'skill': skill,
+            'hit_modifier': hit_modifier,
+            'invuln': invuln,
+            'has_cover': False,
+            'has_precision': False,
+            'overwatch_mode': False,
+            'command_reroll_available': False
+        }
+
+        applied_stratagems = []
+        for stratagem_id in active_stratagems:
+            stratagem = get_stratagem_by_id(stratagem_id)
+            if stratagem:
+                combat_params = apply_stratagem_to_combat(stratagem_id, combat_params)
+                applied_stratagems.append(stratagem.name)
+                logger.info(f"Applied stratagem: {stratagem.name}")
+
+        # Update values from stratagem effects
+        skill = combat_params.get('skill', skill)
+        hit_modifier = combat_params.get('hit_modifier', hit_modifier)
+        invuln = combat_params.get('invuln', invuln)
+
+        # Apply cover bonus if Go to Ground was used
+        if combat_params.get('has_cover'):
+            target_abilities.cover = True
+            target_abilities.cover_bonus = 1
+
+        # Apply Smokescreen hit modifier
+        if combat_params.get('hit_modifier', 0) != 0:
+            weapon_abilities.bs_ws_modifier = combat_params['hit_modifier']
+
+        # Apply Precision if Epic Challenge was used
+        if combat_params.get('has_precision'):
+            weapon_abilities.precision = True
+
         # Run simulation
         sim = CombatSimulator()
         result = sim.simulate_attack_sequence(
@@ -213,7 +254,8 @@ def calculate_combat():
                 'combat_type': combat_type,
                 'models_killed': result.models_destroyed,
                 'wounds_dealt': result.damage_after_fnp
-            }
+            },
+            'stratagems_applied': applied_stratagems
         })
 
     except Exception as e:

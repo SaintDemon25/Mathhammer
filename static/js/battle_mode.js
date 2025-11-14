@@ -12,9 +12,15 @@ let selectedDefenderUnit = null;
 let selectedWeapon = null;
 let loadingFor = null; // 'army1' or 'army2'
 
+// CP Tracking
+let cpTotal = 10;
+let cpRemaining = 10;
+let spentStratagems = {}; // { stratagemId: { name, cost } }
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
+    updateCPDisplay();
 });
 
 function setupEventListeners() {
@@ -74,6 +80,11 @@ function setupEventListeners() {
     // Calculate button
     document.getElementById('calculate-btn').addEventListener('click', () => {
         calculateCombat();
+    });
+
+    // CP reset button
+    document.getElementById('cp-reset-btn').addEventListener('click', () => {
+        resetCP();
     });
 }
 
@@ -427,7 +438,8 @@ async function calculateCombat() {
                     unit_size: 10, // TODO: Get from unit composition
                     keywords: selectedDefenderUnit.fullData.categories || []
                 },
-                combat_type: selectedCombatType
+                combat_type: selectedCombatType,
+                active_stratagems: activeStratagems  // Include active stratagems
             })
         });
 
@@ -532,6 +544,18 @@ function displayResults(data) {
                     <span><strong>${result.damage_after_fnp}</strong></span>
                 </div>
             </div>
+
+            ${data.stratagems_applied && data.stratagems_applied.length > 0 ? `
+            <div class="result-breakdown">
+                <h4 style="color: #e94560;">Active Stratagems</h4>
+                ${data.stratagems_applied.map(strat => `
+                    <div class="result-item">
+                        <span>✓ ${strat}</span>
+                        <span style="color: #e94560;">Applied</span>
+                    </div>
+                `).join('')}
+            </div>
+            ` : ''}
         </div>
     `;
 
@@ -587,21 +611,105 @@ async function loadStratagemsForPhase() {
     }
 }
 
-function toggleStratagem(stratagemId) {
+async function toggleStratagem(stratagemId) {
     const index = activeStratagems.indexOf(stratagemId);
     const element = document.querySelector(`[data-id="${stratagemId}"]`);
 
     if (index > -1) {
-        // Remove stratagem
+        // Deactivate stratagem - refund CP
+        const stratData = spentStratagems[stratagemId];
+        if (stratData) {
+            cpRemaining += stratData.cost;
+            delete spentStratagems[stratagemId];
+        }
         activeStratagems.splice(index, 1);
         element.classList.remove('active');
+        showToast(`Deactivated: ${stratData ? stratData.name : stratagemId}`, 'info');
     } else {
-        // Add stratagem
-        activeStratagems.push(stratagemId);
-        element.classList.add('active');
+        // Activate stratagem - spend CP
+        // Fetch stratagem details to get cost
+        try {
+            const response = await fetch(`/api/stratagems/${stratagemId}`);
+            const stratData = await response.json();
+
+            if (cpRemaining >= stratData.cp_cost) {
+                cpRemaining -= stratData.cp_cost;
+                spentStratagems[stratagemId] = {
+                    name: stratData.name,
+                    cost: stratData.cp_cost
+                };
+                activeStratagems.push(stratagemId);
+                element.classList.add('active');
+                showToast(`Activated: ${stratData.name} (-${stratData.cp_cost} CP)`, 'success');
+            } else {
+                showToast(`Not enough CP! Need ${stratData.cp_cost} CP, have ${cpRemaining} CP`, 'error');
+                return;
+            }
+        } catch (error) {
+            console.error('Error fetching stratagem:', error);
+            showToast('Error activating stratagem', 'error');
+            return;
+        }
     }
 
+    updateCPDisplay();
     console.log('Active stratagems:', activeStratagems);
+    console.log('CP remaining:', cpRemaining);
+}
+
+// CP Management Functions
+function updateCPDisplay() {
+    const cpRemainingEl = document.getElementById('cp-remaining');
+    const cpTotalEl = document.getElementById('cp-total');
+    const cpSpentInfo = document.getElementById('cp-spent-info');
+
+    // Update counter
+    cpRemainingEl.textContent = cpRemaining;
+    cpTotalEl.textContent = cpTotal;
+
+    // Update color based on remaining CP
+    cpRemainingEl.classList.remove('low', 'critical');
+    if (cpRemaining <= 2) {
+        cpRemainingEl.classList.add('critical');
+    } else if (cpRemaining <= 5) {
+        cpRemainingEl.classList.add('low');
+    }
+
+    // Update spent stratagems list
+    const spentStratagemIds = Object.keys(spentStratagems);
+    if (spentStratagemIds.length > 0) {
+        cpSpentInfo.classList.add('has-spent');
+        cpSpentInfo.innerHTML = spentStratagemIds.map(id => {
+            const strat = spentStratagems[id];
+            return `
+                <div class="cp-spent-item">
+                    <span class="cp-spent-name">${strat.name}</span>
+                    <span class="cp-spent-cost">-${strat.cost} CP</span>
+                </div>
+            `;
+        }).join('');
+    } else {
+        cpSpentInfo.classList.remove('has-spent');
+        cpSpentInfo.innerHTML = '';
+    }
+}
+
+function resetCP() {
+    // Refund all CP
+    cpRemaining = cpTotal;
+    spentStratagems = {};
+
+    // Clear active stratagems
+    activeStratagems.forEach(id => {
+        const element = document.querySelector(`[data-id="${id}"]`);
+        if (element) {
+            element.classList.remove('active');
+        }
+    });
+    activeStratagems = [];
+
+    updateCPDisplay();
+    showToast('Command Points reset to ' + cpTotal, 'success');
 }
 
 function showToast(message, type = 'info') {

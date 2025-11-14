@@ -47,6 +47,29 @@
 
         <!-- Battle Configuration -->
         <div class="battle-config-section" id="battle-config" style="display: none;">
+            <!-- CP Tracker -->
+            <div class="cp-tracker-panel">
+                <div class="cp-display">
+                    <div class="cp-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <div class="cp-info">
+                        <div class="cp-label">Command Points</div>
+                        <div class="cp-counter">
+                            <span id="cp-remaining" class="cp-remaining">10</span>
+                            <span class="cp-separator">/</span>
+                            <span id="cp-total" class="cp-total">10</span>
+                        </div>
+                    </div>
+                    <button id="cp-reset-btn" class="btn-reset-cp" title="Reset CP">
+                        <i class="fas fa-redo"></i> Reset
+                    </button>
+                </div>
+                <div id="cp-spent-info" class="cp-spent-info">
+                    <!-- Spent stratagems will appear here -->
+                </div>
+            </div>
+
             <div class="card">
                 <h3>Battle Configuration</h3>
 

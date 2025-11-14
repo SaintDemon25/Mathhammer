@@ -16,6 +16,10 @@ from enhanced_parser import EnhancedBSDataParser
 from mathhammer.models import DataCatalog
 from army_builder_api import army_builder_bp
 from battle_mode_api import battle_mode_bp
+from stratagems import (
+    get_core_stratagems, get_stratagem_by_id, get_stratagems_by_phase,
+    apply_stratagem_to_combat, StratagemPhase
+)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'combat-sim-secret-key'
@@ -45,6 +49,12 @@ def army_builder():
 def battle_mode():
     """Army vs Army battle mode page"""
     return render_template('battle_mode.html')
+
+
+@app.route('/stratagems')
+def stratagems_page():
+    """Stratagems reference page"""
+    return render_template('stratagems.html')
 
 
 @app.route('/api/simulate', methods=['POST'])
@@ -265,8 +275,18 @@ def get_unit(unit_id):
     if not unit:
         return jsonify({'error': 'Unit not found'}), 404
 
-    # Extract unit abilities from keywords
+    # Extract unit abilities with descriptions
     unit_abilities = []
+
+    # Get abilities with descriptions from the unit.abilities list
+    for ability in unit.abilities:
+        unit_abilities.append({
+            'name': ability.name,
+            'description': ability.description
+        })
+
+    # Also extract ability keywords from unit profile characteristics
+    ability_keywords = []
     if unit.unit_profile and hasattr(unit.unit_profile, 'characteristics'):
         try:
             # Check if characteristics is a dict (it should be)
@@ -277,7 +297,7 @@ def get_unit(unit_id):
                         char = unit.unit_profile.characteristics[key]
                         char_value = char.value if hasattr(char, 'value') else str(char)
                         if char_value and char_value.strip():
-                            unit_abilities.extend([a.strip() for a in char_value.split(',')])
+                            ability_keywords.extend([a.strip() for a in char_value.split(',')])
                         break
             else:
                 # Fallback
@@ -293,9 +313,18 @@ def get_unit(unit_id):
 
                     if char_name and char_name.lower() in ['keywords', 'abilities']:
                         if char_value:
-                            unit_abilities.extend([a.strip() for a in char_value.split(',')])
+                            ability_keywords.extend([a.strip() for a in char_value.split(',')])
         except Exception as e:
-            logger.warning(f"Error extracting unit abilities: {e}")
+            logger.warning(f"Error extracting unit ability keywords: {e}")
+
+    # Add keywords as abilities without descriptions (if not already in abilities)
+    existing_names = {ab['name'] for ab in unit_abilities}
+    for keyword in ability_keywords:
+        if keyword and keyword not in existing_names:
+            unit_abilities.append({
+                'name': keyword,
+                'description': ''
+            })
 
     return jsonify({
         'id': unit.id,
@@ -448,6 +477,80 @@ def upload_dataset():
             'success': False,
             'error': str(e)
         }), 500
+
+
+@app.route('/api/stratagems', methods=['GET'])
+def get_stratagems():
+    """Get all core stratagems"""
+    stratagems = get_core_stratagems()
+    return jsonify({
+        'stratagems': [{
+            'id': s.id,
+            'name': s.name,
+            'cp_cost': s.cp_cost,
+            'phase': s.phase.value,
+            'description': s.description,
+            'effect': s.effect,
+            'restrictions': s.restrictions,
+            'is_core': s.is_core
+        } for s in stratagems]
+    })
+
+
+@app.route('/api/stratagems/<stratagem_id>', methods=['GET'])
+def get_stratagem(stratagem_id):
+    """Get a specific stratagem by ID"""
+    strat = get_stratagem_by_id(stratagem_id)
+    if not strat:
+        return jsonify({'error': 'Stratagem not found'}), 404
+
+    return jsonify({
+        'id': strat.id,
+        'name': strat.name,
+        'cp_cost': strat.cp_cost,
+        'phase': strat.phase.value,
+        'description': strat.description,
+        'effect': strat.effect,
+        'restrictions': strat.restrictions,
+        'is_core': strat.is_core
+    })
+
+
+@app.route('/api/stratagems/phase/<phase>', methods=['GET'])
+def get_stratagems_for_phase(phase):
+    """Get stratagems usable in a specific phase"""
+    try:
+        # Convert phase string to StratagemPhase enum
+        phase_map = {
+            'command': StratagemPhase.COMMAND,
+            'movement': StratagemPhase.MOVEMENT,
+            'shooting': StratagemPhase.SHOOTING,
+            'charge': StratagemPhase.CHARGE,
+            'fight': StratagemPhase.FIGHT,
+            'opponent_movement': StratagemPhase.OPPONENT_MOVEMENT,
+            'opponent_charge': StratagemPhase.OPPONENT_CHARGE,
+            'opponent_shooting': StratagemPhase.OPPONENT_SHOOTING
+        }
+
+        phase_enum = phase_map.get(phase.lower())
+        if not phase_enum:
+            return jsonify({'error': 'Invalid phase'}), 400
+
+        stratagems = get_stratagems_by_phase(phase_enum)
+        return jsonify({
+            'phase': phase,
+            'stratagems': [{
+                'id': s.id,
+                'name': s.name,
+                'cp_cost': s.cp_cost,
+                'phase': s.phase.value,
+                'description': s.description,
+                'effect': s.effect,
+                'restrictions': s.restrictions
+            } for s in stratagems]
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':

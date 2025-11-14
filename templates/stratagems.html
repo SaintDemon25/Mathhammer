@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stratagems - Warhammer 40k Mathhammer</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .stratagems-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .phase-section {
+            margin-bottom: 40px;
+        }
+
+        .phase-header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e94560;
+            padding: 15px 20px;
+            border-left: 4px solid #e94560;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-size: 1.3em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .stratagem-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .stratagem-card {
+            background: linear-gradient(145deg, #1a1a2e 0%, #0f1419 100%);
+            border: 1px solid #e94560;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(233, 69, 96, 0.1);
+        }
+
+        .stratagem-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(233, 69, 96, 0.3);
+            border-color: #ff6b9d;
+        }
+
+        .stratagem-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e94560;
+        }
+
+        .stratagem-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .stratagem-cp {
+            background: #e94560;
+            color: #fff;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .stratagem-phase {
+            color: #aaa;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+
+        .stratagem-description {
+            color: #e0e0e0;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .stratagem-restrictions {
+            background: rgba(233, 69, 96, 0.1);
+            border-left: 3px solid #e94560;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #ffaa00;
+            border-radius: 4px;
+        }
+
+        .navigation {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .nav-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #e94560 0%, #d63447 100%);
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 0 10px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .nav-button:hover {
+            background: linear-gradient(135deg, #ff6b9d 0%, #e94560 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4);
+        }
+
+        .stats-summary {
+            background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .stats-summary h3 {
+            color: #e94560;
+            margin-bottom: 10px;
+        }
+
+        .ability-description-box {
+            background: rgba(233, 69, 96, 0.05);
+            border: 1px solid #e94560;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .ability-title {
+            color: #e94560;
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+
+        .ability-text {
+            color: #e0e0e0;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="stratagems-container">
+        <h1 style="text-align: center; color: #e94560; margin-bottom: 10px;">Warhammer 40k 10th Edition</h1>
+        <h2 style="text-align: center; color: #fff; margin-bottom: 30px;">Core Stratagems Reference</h2>
+
+        <div class="navigation">
+            <a href="/" class="nav-button">← Back to Simulator</a>
+            <a href="/battle-mode" class="nav-button">Battle Mode</a>
+            <a href="/army-builder" class="nav-button">Army Builder</a>
+        </div>
+
+        <div class="stats-summary">
+            <h3>Core Stratagems Overview</h3>
+            <p id="summary-text">Loading stratagems...</p>
+        </div>
+
+        <div id="stratagems-content">
+            <!-- Stratagems will be loaded here -->
+        </div>
+    </div>
+
+    <script>
+        // Load and display stratagems
+        async function loadStratagems() {
+            try {
+                const response = await fetch('/api/stratagems');
+                const data = await response.json();
+
+                const stratagems = data.stratagems;
+
+                // Update summary
+                const cpCounts = {};
+                stratagems.forEach(s => {
+                    cpCounts[s.cp_cost] = (cpCounts[s.cp_cost] || 0) + 1;
+                });
+
+                document.getElementById('summary-text').innerHTML = `
+                    Total Stratagems: <strong>${stratagems.length}</strong> |
+                    1 CP: <strong>${cpCounts[1] || 0}</strong> |
+                    2 CP: <strong>${cpCounts[2] || 0}</strong>
+                `;
+
+                // Group by phase
+                const byPhase = {};
+                stratagems.forEach(s => {
+                    if (!byPhase[s.phase]) {
+                        byPhase[s.phase] = [];
+                    }
+                    byPhase[s.phase].push(s);
+                });
+
+                // Render by phase
+                const container = document.getElementById('stratagems-content');
+                container.innerHTML = '';
+
+                // Define phase order
+                const phaseOrder = [
+                    'Command Phase',
+                    'Movement Phase',
+                    "Opponent's Movement Phase",
+                    'Shooting Phase',
+                    "Opponent's Shooting Phase",
+                    'Charge Phase',
+                    "Opponent's Charge Phase",
+                    'Fight Phase',
+                    'Any Phase'
+                ];
+
+                phaseOrder.forEach(phase => {
+                    if (!byPhase[phase]) return;
+
+                    const section = document.createElement('div');
+                    section.className = 'phase-section';
+
+                    section.innerHTML = `
+                        <div class="phase-header">${phase}</div>
+                        <div class="stratagem-grid" id="phase-${phase.replace(/[^a-z0-9]/gi, '-')}"></div>
+                    `;
+
+                    container.appendChild(section);
+
+                    const grid = section.querySelector('.stratagem-grid');
+
+                    byPhase[phase].forEach(strat => {
+                        const card = document.createElement('div');
+                        card.className = 'stratagem-card';
+                        card.innerHTML = `
+                            <div class="stratagem-header">
+                                <div class="stratagem-name">${strat.name}</div>
+                                <div class="stratagem-cp">${strat.cp_cost} CP</div>
+                            </div>
+                            <div class="stratagem-phase">${strat.phase}</div>
+                            <div class="stratagem-description">${strat.description}</div>
+                            ${strat.restrictions ? `<div class="stratagem-restrictions"><strong>⚠ Restrictions:</strong> ${strat.restrictions}</div>` : ''}
+                        `;
+                        grid.appendChild(card);
+                    });
+                });
+
+            } catch (error) {
+                console.error('Error loading stratagems:', error);
+                document.getElementById('stratagems-content').innerHTML = `
+                    <div style="color: #e94560; text-align: center; padding: 50px;">
+                        Error loading stratagems: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Load on page load
+        document.addEventListener('DOMContentLoaded', loadStratagems);
+    </script>
+</body>
+</html>

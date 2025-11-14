@@ -6,6 +6,7 @@
     <title>Battle Mode - Army vs Army - Mathhammer</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/combat_sim.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/battle_mode.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <!-- Toast Container -->
@@ -65,6 +66,19 @@
                             <strong>Shooting While Engaged</strong>
                             <small>Monsters/Vehicles only (or Pistols)</small>
                         </button>
+                    </div>
+                </div>
+
+                <!-- Stratagems Panel -->
+                <div class="stratagems-panel" style="margin-top: 20px;">
+                    <h4 style="color: #e94560; margin-bottom: 10px;">
+                        <i class="fas fa-scroll"></i> Available Stratagems
+                        <a href="/stratagems" target="_blank" style="font-size: 0.8em; margin-left: 10px; color: #aaa;">
+                            (View All)
+                        </a>
+                    </h4>
+                    <div id="stratagems-list" class="stratagems-list">
+                        <p style="color: #888;">Select combat type to see available stratagems</p>
                     </div>
                 </div>
 

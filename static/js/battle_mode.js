@@ -41,6 +41,9 @@ function setupEventListeners() {
             btn.classList.add('active');
             selectedCombatType = btn.dataset.type;
 
+            // Load stratagems for this phase
+            loadStratagemsForPhase();
+
             // Reset weapon selection when combat type changes
             selectedWeapon = null;
             if (selectedAttackerUnit) {
@@ -206,6 +209,22 @@ async function displayUnitDetails(role, unit) {
         if (data.success) {
             const fullUnit = data.unit;
 
+            // Build abilities HTML
+            let abilitiesHTML = '';
+            if (fullUnit.profile && fullUnit.profile.abilities && fullUnit.profile.abilities.length > 0) {
+                abilitiesHTML = `
+                    <div class="unit-abilities">
+                        <div class="unit-abilities-title">Unit Abilities</div>
+                        ${fullUnit.profile.abilities.map(ability => `
+                            <div class="ability-item">
+                                <div class="ability-item-name">${ability.name}</div>
+                                ${ability.description ? `<div class="ability-item-description">${ability.description}</div>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
             detailsDiv.innerHTML = `
                 <div class="unit-detail-name">${unit.unit_name}</div>
                 <div class="unit-stat-grid">
@@ -234,6 +253,7 @@ async function displayUnitDetails(role, unit) {
                         <span class="unit-stat-value">${fullUnit.oc || '-'}</span>
                     </div>
                 </div>
+                ${abilitiesHTML}
             `;
 
             // Store full unit data
@@ -526,6 +546,62 @@ function showModal(modalId) {
 
 function hideModal(modalId) {
     document.getElementById(modalId).classList.remove('show');
+}
+
+// Stratagem Management
+let activeStratagems = [];
+
+async function loadStratagemsForPhase() {
+    const stratagemsList = document.getElementById('stratagems-list');
+
+    // Map combat types to phases
+    const phaseMap = {
+        'ranged': 'shooting',
+        'melee': 'fight',
+        'ranged_engaged': 'opponent_shooting'
+    };
+
+    const phase = phaseMap[selectedCombatType];
+    if (!phase) return;
+
+    try {
+        const response = await fetch(`/api/stratagems/phase/${phase}`);
+        const data = await response.json();
+
+        if (data.stratagems && data.stratagems.length > 0) {
+            stratagemsList.innerHTML = data.stratagems.map(strat => `
+                <div class="stratagem-item" data-id="${strat.id}" onclick="toggleStratagem('${strat.id}')">
+                    <div class="stratagem-header">
+                        <span class="stratagem-name">${strat.name}</span>
+                        <span class="stratagem-cp">${strat.cp_cost} CP</span>
+                    </div>
+                    <div class="stratagem-description">${strat.description.substring(0, 100)}...</div>
+                </div>
+            `).join('');
+        } else {
+            stratagemsList.innerHTML = '<p style="color: #888;">No stratagems available for this phase</p>';
+        }
+    } catch (error) {
+        console.error('Error loading stratagems:', error);
+        stratagemsList.innerHTML = '<p style="color: #e94560;">Error loading stratagems</p>';
+    }
+}
+
+function toggleStratagem(stratagemId) {
+    const index = activeStratagems.indexOf(stratagemId);
+    const element = document.querySelector(`[data-id="${stratagemId}"]`);
+
+    if (index > -1) {
+        // Remove stratagem
+        activeStratagems.splice(index, 1);
+        element.classList.remove('active');
+    } else {
+        // Add stratagem
+        activeStratagems.push(stratagemId);
+        element.classList.add('active');
+    }
+
+    console.log('Active stratagems:', activeStratagems);
 }
 
 function showToast(message, type = 'info') {

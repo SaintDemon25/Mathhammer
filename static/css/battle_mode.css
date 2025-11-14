@@ -376,6 +376,123 @@
     border-bottom: none;
 }
 
+/* Stratagems Panel */
+.stratagems-panel {
+    background: var(--surface-light);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.stratagems-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.stratagem-item {
+    background: var(--surface);
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.stratagem-item:hover {
+    border-color: #e94560;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(233, 69, 96, 0.2);
+}
+
+.stratagem-item.active {
+    border-color: #e94560;
+    background: linear-gradient(135deg, var(--surface), rgba(233, 69, 96, 0.1));
+    box-shadow: 0 0 15px rgba(233, 69, 96, 0.3);
+}
+
+.stratagem-item.active::after {
+    content: '✓ ACTIVE';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: #e94560;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    font-weight: bold;
+}
+
+.stratagem-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.stratagem-name {
+    font-weight: bold;
+    color: #e94560;
+    font-size: 0.95rem;
+}
+
+.stratagem-cp {
+    background: #e94560;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.stratagem-description {
+    font-size: 0.85rem;
+    color: var(--secondary-text);
+    line-height: 1.4;
+    margin-top: 5px;
+}
+
+/* Unit Abilities Display */
+.unit-abilities {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+}
+
+.unit-abilities-title {
+    color: #e94560;
+    font-weight: bold;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.ability-item {
+    background: rgba(233, 69, 96, 0.05);
+    border-left: 3px solid #e94560;
+    padding: 8px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+}
+
+.ability-item-name {
+    font-weight: bold;
+    color: #e94560;
+    margin-bottom: 4px;
+}
+
+.ability-item-description {
+    font-size: 0.85rem;
+    color: var(--text);
+    line-height: 1.4;
+}
+
+.ability-item-description:empty {
+    display: none;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
     .army-selection-section {
@@ -397,6 +514,10 @@
     }
 
     .weapon-cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stratagems-list {
         grid-template-columns: 1fr;
     }
 }

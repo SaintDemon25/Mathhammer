@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battle Mode - Army vs Army - Mathhammer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/combat_sim.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/battle_mode.css') }}">
+</head>
+<body>
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <div class="container">
+        <header>
+            <h1>⚔️ Battle Mode - Army vs Army</h1>
+            <p class="subtitle">Load two armies and calculate unit-vs-unit combat</p>
+            <nav>
+                <a href="/" class="nav-link">← Combat Simulator</a>
+                <a href="/army-builder" class="nav-link">Army Builder</a>
+            </nav>
+        </header>
+
+        <!-- Army Loading Section -->
+        <div class="army-selection-section">
+            <div class="army-selector">
+                <h3>Attacker Army</h3>
+                <button id="load-army-1-btn" class="btn btn-primary">Load Army 1</button>
+                <div id="army-1-info" class="army-info-display">
+                    <p class="placeholder">No army loaded</p>
+                </div>
+            </div>
+
+            <div class="vs-divider">
+                <span class="vs-text">VS</span>
+            </div>
+
+            <div class="army-selector">
+                <h3>Defender Army</h3>
+                <button id="load-army-2-btn" class="btn btn-primary">Load Army 2</button>
+                <div id="army-2-info" class="army-info-display">
+                    <p class="placeholder">No army loaded</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Battle Configuration -->
+        <div class="battle-config-section" id="battle-config" style="display: none;">
+            <div class="card">
+                <h3>Battle Configuration</h3>
+
+                <!-- Combat Type Selection -->
+                <div class="form-group">
+                    <label>Combat Type:</label>
+                    <div class="combat-type-buttons">
+                        <button class="combat-type-btn active" data-type="ranged">
+                            <strong>Ranged Combat</strong>
+                            <small>Shooting Phase - Not in engagement</small>
+                        </button>
+                        <button class="combat-type-btn" data-type="melee">
+                            <strong>Melee Combat</strong>
+                            <small>Fight Phase - In engagement range</small>
+                        </button>
+                        <button class="combat-type-btn" data-type="ranged_engaged">
+                            <strong>Shooting While Engaged</strong>
+                            <small>Monsters/Vehicles only (or Pistols)</small>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Unit Selection -->
+                <div class="battle-units-section">
+                    <div class="unit-selection">
+                        <h4>Attacker Unit</h4>
+                        <select id="attacker-unit-select" class="unit-select">
+                            <option value="">Select attacking unit...</option>
+                        </select>
+                        <div id="attacker-unit-details" class="unit-details"></div>
+                    </div>
+
+                    <div class="unit-selection">
+                        <h4>Defender Unit</h4>
+                        <select id="defender-unit-select" class="unit-select">
+                            <option value="">Select defending unit...</option>
+                        </select>
+                        <div id="defender-unit-details" class="unit-details"></div>
+                    </div>
+                </div>
+
+                <!-- Weapon Selection -->
+                <div class="weapon-selection-section" id="weapon-selection" style="display: none;">
+                    <h4>Select Weapon</h4>
+                    <div id="weapon-list" class="weapon-cards-grid"></div>
+                </div>
+
+                <!-- Calculate Button -->
+                <div class="calculate-section" id="calculate-section" style="display: none;">
+                    <button id="calculate-btn" class="btn btn-success btn-large">
+                        ⚔️ Calculate Combat
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Battle Results -->
+        <div class="battle-results-section" id="battle-results" style="display: none;">
+            <div class="card">
+                <h3>Battle Results</h3>
+                <div id="results-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Load Army -->
+    <div id="load-army-modal" class="modal">
+        <div class="modal-content">
+            <h2>Select Army</h2>
+            <div id="army-list-modal" class="saved-armies-list">
+                <p>Loading...</p>
+            </div>
+            <div class="modal-actions">
+                <button id="cancel-load-modal-btn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/battle_mode.js') }}"></script>
+</body>
+</html>

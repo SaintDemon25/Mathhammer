@@ -1,0 +1,402 @@
+/* Battle Mode Styles */
+
+.army-selection-section {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 20px;
+    align-items: start;
+    margin-bottom: 30px;
+}
+
+.army-selector {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.army-selector h3 {
+    margin-top: 0;
+    color: var(--accent-color);
+    margin-bottom: 15px;
+}
+
+.vs-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 0;
+}
+
+.vs-text {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--accent-color);
+    background: var(--surface);
+    padding: 10px 20px;
+    border: 2px solid var(--accent-color);
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.army-info-display {
+    margin-top: 15px;
+    min-height: 100px;
+}
+
+.army-info-display.loaded {
+    background: var(--surface-light);
+    border: 1px solid var(--accent-color);
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.army-name {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: var(--accent-color);
+    margin-bottom: 8px;
+}
+
+.army-details {
+    font-size: 0.9rem;
+    color: var(--secondary-text);
+}
+
+.army-units-count {
+    margin-top: 8px;
+    font-size: 0.85rem;
+}
+
+/* Battle Configuration */
+.battle-config-section {
+    margin-bottom: 30px;
+}
+
+.combat-type-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.combat-type-btn {
+    background: var(--surface-light);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.combat-type-btn:hover {
+    border-color: var(--accent-color);
+    transform: translateY(-2px);
+}
+
+.combat-type-btn.active {
+    border-color: var(--accent-color);
+    background: linear-gradient(135deg, var(--surface-light), rgba(212, 175, 55, 0.1));
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+}
+
+.combat-type-btn strong {
+    display: block;
+    color: var(--accent-color);
+    margin-bottom: 5px;
+}
+
+.combat-type-btn small {
+    display: block;
+    color: var(--secondary-text);
+    font-size: 0.8rem;
+}
+
+.battle-units-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.unit-selection h4 {
+    color: var(--accent-color);
+    margin-bottom: 10px;
+}
+
+.unit-select {
+    width: 100%;
+    padding: 10px;
+    background: var(--background);
+    color: var(--text);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.unit-details {
+    margin-top: 15px;
+    padding: 15px;
+    background: var(--surface-light);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    min-height: 100px;
+}
+
+.unit-details.loaded {
+    border-color: var(--accent-color);
+}
+
+.unit-detail-name {
+    font-weight: bold;
+    color: var(--accent-color);
+    margin-bottom: 8px;
+}
+
+.unit-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.unit-stat {
+    text-align: center;
+}
+
+.unit-stat-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--secondary-text);
+    margin-bottom: 3px;
+}
+
+.unit-stat-value {
+    display: block;
+    font-weight: bold;
+    color: var(--accent-color);
+}
+
+/* Weapon Selection */
+.weapon-selection-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.weapon-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.weapon-battle-card {
+    background: var(--surface-light);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.weapon-battle-card:hover {
+    border-color: var(--accent-color);
+    transform: scale(1.02);
+}
+
+.weapon-battle-card.selected {
+    border-color: var(--accent-color);
+    background: linear-gradient(135deg, var(--surface-light), rgba(212, 175, 55, 0.15));
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+}
+
+.weapon-battle-card.selected::before {
+    content: '✓';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: var(--accent-color);
+    color: var(--background);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.weapon-battle-name {
+    font-weight: bold;
+    color: var(--accent-color);
+    margin-bottom: 8px;
+}
+
+.weapon-battle-type {
+    font-size: 0.8rem;
+    color: var(--secondary-text);
+    margin-bottom: 10px;
+}
+
+.weapon-stats-row {
+    display: flex;
+    gap: 15px;
+    margin: 10px 0;
+}
+
+.weapon-stat-item {
+    flex: 1;
+    text-align: center;
+}
+
+.weapon-stat-item strong {
+    display: block;
+    color: var(--accent-color);
+    font-size: 1.1rem;
+}
+
+.weapon-stat-item small {
+    display: block;
+    color: var(--secondary-text);
+    font-size: 0.75rem;
+}
+
+.weapon-keywords {
+    margin-top: 10px;
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.keyword-badge {
+    background: rgba(212, 175, 55, 0.2);
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+}
+
+/* Calculate Section */
+.calculate-section {
+    margin-top: 30px;
+    text-align: center;
+}
+
+.btn-large {
+    padding: 15px 40px;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+/* Battle Results */
+.battle-results-section {
+    margin-top: 30px;
+}
+
+.results-summary {
+    background: linear-gradient(135deg, var(--surface-light), rgba(212, 175, 55, 0.1));
+    border: 2px solid var(--accent-color);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.results-title {
+    font-size: 1.3rem;
+    color: var(--accent-color);
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.results-matchup {
+    text-align: center;
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    color: var(--text);
+}
+
+.results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.result-stat {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 15px;
+    text-align: center;
+}
+
+.result-stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--accent-color);
+    display: block;
+    margin-bottom: 5px;
+}
+
+.result-stat-label {
+    font-size: 0.85rem;
+    color: var(--secondary-text);
+}
+
+.results-detailed {
+    margin-top: 20px;
+}
+
+.result-breakdown {
+    background: var(--surface-light);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 10px;
+}
+
+.result-breakdown h4 {
+    color: var(--accent-color);
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.result-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.result-item:last-child {
+    border-bottom: none;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .army-selection-section {
+        grid-template-columns: 1fr;
+    }
+
+    .vs-divider {
+        padding: 10px 0;
+    }
+
+    .vs-text {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+
+    .battle-units-section {
+        grid-template-columns: 1fr;
+    }
+
+    .weapon-cards-grid {
+        grid-template-columns: 1fr;
+    }
+}

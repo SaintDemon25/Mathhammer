@@ -15,12 +15,14 @@ from combat_engine import (
 from enhanced_parser import EnhancedBSDataParser
 from mathhammer.models import DataCatalog
 from army_builder_api import army_builder_bp
+from battle_mode_api import battle_mode_bp
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'combat-sim-secret-key'
 
 # Register blueprints
 app.register_blueprint(army_builder_bp)
+app.register_blueprint(battle_mode_bp)
 
 # Global data
 catalog = DataCatalog()
@@ -37,6 +39,12 @@ def index():
 def army_builder():
     """Army builder page"""
     return render_template('army_builder.html')
+
+
+@app.route('/battle-mode')
+def battle_mode():
+    """Army vs Army battle mode page"""
+    return render_template('battle_mode.html')
 
 
 @app.route('/api/simulate', methods=['POST'])

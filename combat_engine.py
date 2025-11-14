@@ -31,7 +31,7 @@ class DiceRoll:
 
     @staticmethod
     def parse_dice_notation(notation: str) -> int:
-        """Parse dice notation like 'D6', '2D6', 'D3' and return result"""
+        """Parse dice notation like 'D6', '2D6', 'D3', 'D6+2', '2D6+4' and return result"""
         notation = notation.upper().strip()
 
         # Handle static numbers
@@ -40,8 +40,20 @@ class DiceRoll:
         except ValueError:
             pass
 
-        # Handle dice notation
+        # Handle dice notation with optional modifier
         if 'D' in notation:
+            modifier = 0
+
+            # Check for +/- modifier
+            if '+' in notation:
+                dice_part, mod_part = notation.split('+')
+                modifier = int(mod_part)
+                notation = dice_part
+            elif '-' in notation and notation.count('-') == 1:
+                dice_part, mod_part = notation.split('-')
+                modifier = -int(mod_part)
+                notation = dice_part
+
             parts = notation.split('D')
             num_dice = int(parts[0]) if parts[0] else 1
             dice_type = int(parts[1])
@@ -49,7 +61,7 @@ class DiceRoll:
             total = 0
             for _ in range(num_dice):
                 total += random.randint(1, dice_type)
-            return total
+            return total + modifier
 
         return 1
 

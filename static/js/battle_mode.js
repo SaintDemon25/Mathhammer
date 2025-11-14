@@ -417,6 +417,9 @@ async function calculateCombat() {
     try {
         showToast('Calculating combat...', 'info');
 
+        // Get number of simulations
+        const numSimulations = parseInt(document.getElementById('num-simulations').value) || 1;
+
         const response = await fetch('/api/battle/calculate-combat', {
             method: 'POST',
             headers: {
@@ -439,7 +442,8 @@ async function calculateCombat() {
                     keywords: selectedDefenderUnit.fullData.categories || []
                 },
                 combat_type: selectedCombatType,
-                active_stratagems: activeStratagems  // Include active stratagems
+                active_stratagems: activeStratagems,  // Include active stratagems
+                num_simulations: numSimulations  // Include simulation iterations
             })
         });
 
@@ -463,10 +467,15 @@ function displayResults(data) {
 
     const result = data.result;
     const summary = data.summary;
+    const stats = data.stats;
+    const numSims = data.num_simulations || 1;
+
+    // Format numbers (round if averages)
+    const fmt = (val) => numSims > 1 ? val.toFixed(1) : Math.round(val);
 
     resultsContent.innerHTML = `
         <div class="results-summary">
-            <div class="results-title">Combat Results</div>
+            <div class="results-title">Combat Results${numSims > 1 ? ` (${numSims} iterations)` : ''}</div>
             <div class="results-matchup">
                 ${summary.attacker} vs ${summary.defender}
             </div>
@@ -476,23 +485,23 @@ function displayResults(data) {
                     <span class="result-stat-label">Attacks</span>
                 </div>
                 <div class="result-stat">
-                    <span class="result-stat-value">${result.num_hits}</span>
+                    <span class="result-stat-value">${fmt(result.num_hits)}</span>
                     <span class="result-stat-label">Hits</span>
                 </div>
                 <div class="result-stat">
-                    <span class="result-stat-value">${result.num_wounds}</span>
+                    <span class="result-stat-value">${fmt(result.num_wounds)}</span>
                     <span class="result-stat-label">Wounds</span>
                 </div>
                 <div class="result-stat">
-                    <span class="result-stat-value">${result.num_saves_failed}</span>
+                    <span class="result-stat-value">${fmt(result.num_saves_failed)}</span>
                     <span class="result-stat-label">Failed Saves</span>
                 </div>
                 <div class="result-stat">
-                    <span class="result-stat-value">${result.total_damage}</span>
+                    <span class="result-stat-value">${fmt(result.total_damage)}</span>
                     <span class="result-stat-label">Total Damage</span>
                 </div>
                 <div class="result-stat">
-                    <span class="result-stat-value">${result.models_destroyed}</span>
+                    <span class="result-stat-value">${fmt(summary.models_killed)}</span>
                     <span class="result-stat-label">Models Killed</span>
                 </div>
             </div>
@@ -507,28 +516,34 @@ function displayResults(data) {
                 </div>
                 <div class="result-item">
                     <span>Successful Hits:</span>
-                    <span>${result.num_hits} (${result.num_critical_hits} critical)</span>
+                    <span>${fmt(result.num_hits)} (${fmt(result.num_critical_hits)} critical)</span>
                 </div>
                 <div class="result-item">
                     <span>Successful Wounds:</span>
-                    <span>${result.num_wounds} (${result.num_critical_wounds} critical)</span>
+                    <span>${fmt(result.num_wounds)} (${fmt(result.num_critical_wounds)} critical)</span>
                 </div>
                 <div class="result-item">
                     <span>Saves Made:</span>
-                    <span>${result.num_saves_made}</span>
+                    <span>${fmt(result.num_saves_made)}</span>
                 </div>
                 <div class="result-item">
                     <span>Saves Failed:</span>
-                    <span>${result.num_saves_failed}</span>
+                    <span>${fmt(result.num_saves_failed)}</span>
                 </div>
                 <div class="result-item">
                     <span>Damage Dealt:</span>
-                    <span>${result.total_damage}</span>
+                    <span>${fmt(result.total_damage)}</span>
                 </div>
                 ${result.damage_after_fnp !== result.total_damage ? `
                 <div class="result-item">
                     <span>After Feel No Pain:</span>
-                    <span>${result.damage_after_fnp}</span>
+                    <span>${fmt(result.damage_after_fnp)}</span>
+                </div>
+                ` : ''}
+                ${result.mortal_wounds && result.mortal_wounds > 0 ? `
+                <div class="result-item" style="border-left: 3px solid #e94560;">
+                    <span>💀 Mortal Wounds:</span>
+                    <span style="color: #e94560; font-weight: bold;">${result.mortal_wounds}</span>
                 </div>
                 ` : ''}
             </div>
@@ -537,17 +552,37 @@ function displayResults(data) {
                 <h4>Final Impact</h4>
                 <div class="result-item">
                     <span>Models Destroyed:</span>
-                    <span><strong>${result.models_destroyed}</strong></span>
+                    <span><strong>${fmt(summary.models_killed)}</strong></span>
                 </div>
                 <div class="result-item">
                     <span>Wounds Inflicted:</span>
-                    <span><strong>${result.damage_after_fnp}</strong></span>
+                    <span><strong>${fmt(summary.wounds_dealt)}</strong></span>
+                </div>
+                ${summary.mortal_wounds && summary.mortal_wounds > 0 ? `
+                <div class="result-item">
+                    <span>From Mortal Wounds:</span>
+                    <span style="color: #e94560;"><strong>${summary.mortal_wounds}</strong></span>
+                </div>
+                ` : ''}
+            </div>
+
+            ${stats ? `
+            <div class="result-breakdown">
+                <h4 style="color: #d4af37;">📊 Statistics (${numSims} rolls)</h4>
+                <div class="result-item">
+                    <span>Damage Range:</span>
+                    <span>${stats.min_damage} - ${stats.max_damage} (avg: ${stats.avg_damage.toFixed(1)})</span>
+                </div>
+                <div class="result-item">
+                    <span>Models Killed Range:</span>
+                    <span>${stats.min_models_killed} - ${stats.max_models_killed} (avg: ${stats.avg_models_killed.toFixed(1)})</span>
                 </div>
             </div>
+            ` : ''}
 
             ${data.stratagems_applied && data.stratagems_applied.length > 0 ? `
             <div class="result-breakdown">
-                <h4 style="color: #e94560;">Active Stratagems</h4>
+                <h4 style="color: #e94560;">⚡ Active Stratagems</h4>
                 ${data.stratagems_applied.map(strat => `
                     <div class="result-item">
                         <span>✓ ${strat}</span>

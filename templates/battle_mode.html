@@ -130,8 +130,19 @@
                     <div id="weapon-list" class="weapon-cards-grid"></div>
                 </div>
 
-                <!-- Calculate Button -->
+                <!-- Simulation Options & Calculate Button -->
                 <div class="calculate-section" id="calculate-section" style="display: none;">
+                    <div class="simulation-options">
+                        <label for="num-simulations">
+                            <i class="fas fa-dice"></i> Simulation Iterations:
+                        </label>
+                        <select id="num-simulations" class="sim-select">
+                            <option value="1">1 (Single Roll)</option>
+                            <option value="10">10 (Quick Average)</option>
+                            <option value="100" selected>100 (Statistical)</option>
+                            <option value="1000">1000 (Precise)</option>
+                        </select>
+                    </div>
                     <button id="calculate-btn" class="btn btn-success btn-large">
                         ⚔️ Calculate Combat
                     </button>

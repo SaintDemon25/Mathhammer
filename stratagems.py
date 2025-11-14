@@ -192,4 +192,15 @@ def apply_stratagem_to_combat(stratagem_id: str, combat_params: dict) -> dict:
         # Grant Precision
         modified_params['has_precision'] = True
 
+    elif strat.id == "tank_shock":
+        # Tank Shock: Roll dice equal to weapon Strength, 5+ = mortal wound (max 6)
+        # Estimated average: ~2-3 mortal wounds for S7-8 weapons
+        modified_params['tank_shock_active'] = True
+        modified_params['mortal_wounds_bonus'] = 2  # Estimated average
+
+    elif strat.id == "grenades":
+        # Grenades: Roll 6D6, each 6 = 1 mortal wound (average 1 MW)
+        modified_params['grenades_active'] = True
+        modified_params['mortal_wounds_bonus'] = modified_params.get('mortal_wounds_bonus', 0) + 1
+
     return modified_params

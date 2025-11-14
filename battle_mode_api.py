@@ -185,7 +185,8 @@ def calculate_combat():
             'has_cover': False,
             'has_precision': False,
             'overwatch_mode': False,
-            'command_reroll_available': False
+            'command_reroll_available': False,
+            'mortal_wounds_bonus': 0
         }
 
         applied_stratagems = []
@@ -200,6 +201,7 @@ def calculate_combat():
         skill = combat_params.get('skill', skill)
         hit_modifier = combat_params.get('hit_modifier', hit_modifier)
         invuln = combat_params.get('invuln', invuln)
+        mortal_wounds_bonus = combat_params.get('mortal_wounds_bonus', 0)
 
         # Apply cover bonus if Go to Ground was used
         if combat_params.get('has_cover'):
@@ -214,29 +216,62 @@ def calculate_combat():
         if combat_params.get('has_precision'):
             weapon_abilities.precision = True
 
-        # Run simulation
-        sim = CombatSimulator()
-        result = sim.simulate_attack_sequence(
-            num_attacks=num_attacks,
-            skill=skill,
-            strength=strength,
-            ap=ap,
-            damage=damage_str,
-            toughness=toughness,
-            save=save,
-            invuln=invuln,
-            wounds_per_model=wounds,
-            unit_size=unit_size,
-            attack_type=attack_type,
-            weapon_abilities=weapon_abilities,
-            target_abilities=target_abilities,
-            attacker_abilities=UnitAbilities()
-        )
+        # Run simulation (run multiple times for statistics)
+        num_simulations = data.get('num_simulations', 1)
+        results = []
 
-        # Format result
-        return jsonify({
-            'success': True,
-            'result': {
+        for _ in range(num_simulations):
+            sim = CombatSimulator()
+            result = sim.simulate_attack_sequence(
+                num_attacks=num_attacks,
+                skill=skill,
+                strength=strength,
+                ap=ap,
+                damage=damage_str,
+                toughness=toughness,
+                save=save,
+                invuln=invuln,
+                wounds_per_model=wounds,
+                unit_size=unit_size,
+                attack_type=attack_type,
+                weapon_abilities=weapon_abilities,
+                target_abilities=target_abilities,
+                attacker_abilities=UnitAbilities()
+            )
+            results.append(result)
+
+        # Calculate average result if multiple simulations
+        if num_simulations > 1:
+            avg_result = {
+                'num_attacks': num_attacks,
+                'num_hits': sum(r.num_hits for r in results) / num_simulations,
+                'num_critical_hits': sum(r.num_critical_hits for r in results) / num_simulations,
+                'num_wounds': sum(r.num_wounds for r in results) / num_simulations,
+                'num_critical_wounds': sum(r.num_critical_wounds for r in results) / num_simulations,
+                'num_saves_made': sum(r.num_saves_made for r in results) / num_simulations,
+                'num_saves_failed': sum(r.num_saves_failed for r in results) / num_simulations,
+                'total_damage': sum(r.total_damage for r in results) / num_simulations,
+                'damage_after_fnp': sum(r.damage_after_fnp for r in results) / num_simulations,
+                'models_destroyed': sum(r.models_destroyed for r in results) / num_simulations,
+                'mortal_wounds': mortal_wounds_bonus
+            }
+
+            # Calculate statistics
+            total_damages = [r.total_damage + mortal_wounds_bonus for r in results]
+            models_killed = [r.models_destroyed for r in results]
+
+            stats = {
+                'min_damage': min(total_damages),
+                'max_damage': max(total_damages),
+                'avg_damage': sum(total_damages) / len(total_damages),
+                'min_models_killed': min(models_killed),
+                'max_models_killed': max(models_killed),
+                'avg_models_killed': sum(models_killed) / len(models_killed)
+            }
+        else:
+            # Single simulation
+            result = results[0]
+            avg_result = {
                 'num_attacks': num_attacks,
                 'num_hits': result.num_hits,
                 'num_critical_hits': result.num_critical_hits,
@@ -246,14 +281,28 @@ def calculate_combat():
                 'num_saves_failed': result.num_saves_failed,
                 'total_damage': result.total_damage,
                 'damage_after_fnp': result.damage_after_fnp,
-                'models_destroyed': result.models_destroyed
-            },
+                'models_destroyed': result.models_destroyed,
+                'mortal_wounds': mortal_wounds_bonus
+            }
+            stats = None
+
+        # Add mortal wounds to final damage
+        final_damage = avg_result['damage_after_fnp'] + mortal_wounds_bonus
+        final_models = int(final_damage / wounds) if wounds > 0 else 0
+
+        # Format result
+        return jsonify({
+            'success': True,
+            'result': avg_result,
+            'stats': stats,
+            'num_simulations': num_simulations,
             'summary': {
                 'attacker': f"{attacker_unit.get('name')} with {attacker_weapon.get('name')}",
                 'defender': defender_unit.get('name'),
                 'combat_type': combat_type,
-                'models_killed': result.models_destroyed,
-                'wounds_dealt': result.damage_after_fnp
+                'models_killed': final_models,
+                'wounds_dealt': final_damage,
+                'mortal_wounds': mortal_wounds_bonus
             },
             'stratagems_applied': applied_stratagems
         })

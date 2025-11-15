@@ -450,7 +450,8 @@ function applyWeaponAbilities(abilities) {
 
     // Apply loaded abilities
     abilities.forEach(ability => {
-        const abilityName = ability.trim();
+        // Handle both string and object formats
+        const abilityName = (typeof ability === 'string' ? ability : ability.name || '').trim();
 
         // Check for exact matches
         if (abilityMap[abilityName]) {
@@ -490,7 +491,8 @@ function applyWeaponAbilities(abilities) {
 function applyDefenderAbilities(abilities) {
     // Auto-check defender ability checkboxes based on loaded abilities
     abilities.forEach(ability => {
-        const abilityName = ability.trim();
+        // Handle both string and object formats
+        const abilityName = (typeof ability === 'string' ? ability : ability.name || '').trim();
 
         // Check for defender abilities
         if (abilityName === 'Stealth') {

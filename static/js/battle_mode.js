@@ -28,6 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupEventListeners() {
+    // Dataset autoload
+    document.getElementById('autoload-datasets-btn').addEventListener('click', autoloadDatasets);
+
     // Army loading
     document.getElementById('load-army-1-btn').addEventListener('click', () => {
         loadingFor = 'army1';
@@ -996,6 +999,42 @@ function toggleComparisonMode() {
     }
 
     checkReadyForCalculation();
+}
+
+async function autoloadDatasets() {
+    const btn = document.getElementById('autoload-datasets-btn');
+    const status = document.getElementById('dataset-status');
+
+    try {
+        // Disable button and show loading
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading Datasets...';
+        status.textContent = 'Loading datasets from GitHub...';
+        status.style.color = 'var(--primary-color)';
+
+        // Call the API endpoint
+        const response = await fetch('/api/load-dataset', { method: 'POST' });
+        const data = await response.json();
+
+        if (data.success) {
+            status.textContent = `✓ Datasets loaded successfully! Units: ${data.unit_count}, Weapons: ${data.weapon_count}`;
+            status.style.color = 'var(--success-color)';
+            showToast('Datasets loaded successfully!', 'success');
+        } else {
+            status.textContent = `✗ Error: ${data.error || 'Failed to load datasets'}`;
+            status.style.color = 'var(--danger-color)';
+            showToast('Failed to load datasets', 'error');
+        }
+    } catch (error) {
+        console.error('Error autoloading datasets:', error);
+        status.textContent = `✗ Error: ${error.message}`;
+        status.style.color = 'var(--danger-color)';
+        showToast('Error loading datasets', 'error');
+    } finally {
+        // Re-enable button
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fab fa-github"></i> Autoload All Datasets';
+    }
 }
 
 function showToast(message, type = 'info') {
